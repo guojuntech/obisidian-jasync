@@ -229,18 +229,49 @@ export class SafeSyncEngine {
 		return result
 	}
 
-	/** Revalidate every approved entry before the first user-file mutation. */
+	/** Unchanged files with an existing common baseline need no history write. */
+	needsBaselineRefresh(item: PlanItem): boolean {
+		if (!this.planned.has(item)) throw new Error('Unapproved sync operation')
+		if (item.action !== 'equal') return false
+		const previous = Object.prototype.hasOwnProperty.call(
+			this.state.records,
+			item.path,
+		)
+			? this.state.records[item.path]
+			: undefined
+		if (!item.local && !item.remote) return previous !== undefined
+		return !(
+			previous &&
+			item.local &&
+			item.remote &&
+			previous.hash === item.local.hash &&
+			previous.hash === item.remote.hash &&
+			previous.size === item.local.size &&
+			previous.size === item.remote.size &&
+			previous.version?.etag === item.remote.version?.etag &&
+			// Listings may omit VersionId; absence is not evidence of a new version.
+			(!item.remote.version?.versionId ||
+				previous.version?.versionId === item.remote.version.versionId)
+		)
+	}
+
+	/** Revalidate approved work before the first user-file mutation. */
 	async validate(
 		items: PlanItem[],
 		onProgress?: (progress: SyncFileProgress) => void,
 	): Promise<void> {
-		const total = items.filter((item) => item.action !== 'skip').length
+		const pending = items.filter((item) => {
+			if (!this.planned.has(item)) throw new Error('Unapproved sync operation')
+			return (
+				item.action !== 'skip' &&
+				(item.action !== 'equal' || this.needsBaselineRefresh(item))
+			)
+		})
+		const total = pending.length
 		let completed = 0
 		onProgress?.({ completed, total })
-		for (const item of items) {
+		for (const item of pending) {
 			this.options.checkCancelled()
-			if (!this.planned.has(item)) throw new Error('Unapproved sync operation')
-			if (item.action === 'skip') continue
 			onProgress?.({ completed, total, currentPath: item.path })
 			await this.verifyLocal(item.path, item.local)
 			await this.verifyRemote(item.path, item.remote)
@@ -255,6 +286,19 @@ export class SafeSyncEngine {
 	}
 
 	async execute(item: PlanItem, allowUnconditional = false): Promise<void> {
+		this.options.checkCancelled()
+		if (!this.planned.has(item)) throw new Error('Unapproved sync operation')
+		if (item.action === 'equal') {
+			// Keeping the old baseline does not mark later edits as synchronized.
+			// A new baseline still requires one fresh check of each side, but no
+			// mutation, recovery backup or second pre-write validation is involved.
+			if (!this.needsBaselineRefresh(item)) return
+			const data = await this.verifyLocal(item.path, item.local)
+			await this.verifyRemote(item.path, item.remote)
+			this.options.checkCancelled()
+			await this.commit(item.path, data, item.remote?.version)
+			return
+		}
 		await this.validate([item])
 		if (item.action === 'skip') return
 		const { local, persistence, remote } = this.options
@@ -266,24 +310,17 @@ export class SafeSyncEngine {
 			throw new PlanChangedError(item.path)
 		let remoteData: ArrayBuffer | undefined
 		// Capture recovery copies before any destructive step, even for a merge.
-		if (item.remote && item.action !== 'equal')
-			remoteData = await this.readRemote(item.path, item.remote)
-		if (item.action !== 'equal') {
-			if (localData)
-				await persistence.backup(this.run, item.path, 'local', localData)
-			if (remoteData)
-				await persistence.backup(this.run, item.path, 'remote', remoteData)
-			await persistence.journal(this.run, item, 'pending')
-		}
+		if (item.remote) remoteData = await this.readRemote(item.path, item.remote)
+		if (localData)
+			await persistence.backup(this.run, item.path, 'local', localData)
+		if (remoteData)
+			await persistence.backup(this.run, item.path, 'remote', remoteData)
+		await persistence.journal(this.run, item, 'pending')
 		await this.validate([item])
 		let data: ArrayBuffer | undefined
 		this.options.checkCancelled()
 		let version: RemoteVersion | undefined
 		switch (item.action) {
-			case 'equal':
-				data = localData
-				version = item.remote?.version
-				break
 			case 'upload':
 				data = localData!
 				version = await this.upload(
@@ -338,8 +375,7 @@ export class SafeSyncEngine {
 		}
 		// Persist the transferred bytes, never a fresh local stat after an upload.
 		await this.commit(item.path, data, version)
-		if (item.action !== 'equal')
-			await persistence.journal(this.run, item, 'complete')
+		await persistence.journal(this.run, item, 'complete')
 	}
 
 	private async commit(
@@ -405,6 +441,7 @@ export class SafeSyncEngine {
 		const data = await this.options.local.read(path)
 		if ((data ? await sha256Hex(data) : undefined) !== expected?.hash)
 			throw new PlanChangedError(path)
+		return data
 	}
 
 	private async verifyRemote(path: string, expected?: FileState) {

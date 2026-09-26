@@ -200,32 +200,52 @@ export async function executesS3Sync(app: App) {
 
 		// Stop including the deliberately unchecked file for subsequent decisions.
 		await app.vault.delete(unchecked)
-		// With no changes, keep the same window through validation and history IO.
+		// A known unchanged vault needs only listing and local content comparison.
 		let unchangedModal: Element | undefined
-		const observedPhases = new Set<string>()
-		inspectRequest = async () => {
-			const phase = plugin.progressService.preparationProgress?.phase
-			if (phase !== 'validating' && phase !== 'recording') return
-			const modal = assertProgress(phase)
-			unchangedModal ??= modal
+		const requestOffset = cloud.requests.length
+		inspectRequest = async (request) => {
 			assert(
-				modal === unchangedModal,
-				'Unchanged sync replaced its progress window',
+				new URL(request.url).searchParams.get('list-type') === '2',
+				'Unchanged sync made a redundant per-file request',
 			)
-			assert(
-				plugin.progressService.preparationProgress?.files?.total === 2,
-				'Unchanged sync did not report its file count',
-			)
-			observedPhases.add(phase)
+			unchangedModal = assertProgress('traversingRemote')
 		}
 		assert(await start(), 'Unchanged sync failed')
 		assert(
-			observedPhases.has('validating') && observedPhases.has('recording'),
-			'Unchanged sync skipped stage progress',
+			cloud.requests.length - requestOffset === 1,
+			'Unchanged sync did not use the listing fast path',
+		)
+		assert(
+			unchangedModal &&
+				document.querySelector('.modal.omni-sync-progress-modal') ===
+					unchangedModal,
+			'Unchanged sync replaced its progress window',
 		)
 		plugin.progressService.closeProgressModal()
 
+		// A previously untracked equal pair still verifies before saving its baseline.
+		await app.vault.create(`${root}/baseline.md`, 'shared')
+		cloud.objects.set(`vault/${root}/baseline.md`, bytes('shared'))
+		let newBaselineVerified = false
+		inspectRequest = async (request) => {
+			if (request.method !== 'HEAD') return
+			assert(
+				request.url.includes('/baseline.md'),
+				'A known unchanged file was rechecked',
+			)
+			assertProgress('recording')
+			assert(
+				plugin.progressService.preparationProgress?.files?.total === 1,
+				'History progress included known unchanged files',
+			)
+			newBaselineVerified = true
+		}
+		assert(await start(), 'New common baseline was not saved')
+		assert(newBaselineVerified, 'New baseline skipped verification')
+		plugin.progressService.closeProgressModal()
+
 		// Stop remains available while preflight requests are in progress.
+		await app.vault.modify(note, 'preflight controls')
 		let stopped = false
 		inspectRequest = async () => {
 			if (
@@ -234,6 +254,10 @@ export async function executesS3Sync(app: App) {
 			)
 				return
 			const modal = assertProgress('validating')
+			assert(
+				plugin.progressService.preparationProgress?.files?.total === 1,
+				'Preflight included a known unchanged file',
+			)
 			const stop = Array.from(modal.querySelectorAll('button')).find(
 				(element) => /Stop sync|停止同步/.test(element.textContent ?? ''),
 			)
@@ -241,8 +265,10 @@ export async function executesS3Sync(app: App) {
 			stopped = true
 			stop.click()
 		}
+		running = start()
+		await approve()
 		assert(
-			!(await start()) && stopped,
+			!(await running) && stopped,
 			'Preflight cancellation did not stop sync',
 		)
 		assert(
@@ -270,7 +296,9 @@ export async function executesS3Sync(app: App) {
 			hidden = true
 			hide.click()
 		}
-		assert(await start(), 'Hidden sync failed')
+		running = start()
+		await approve()
+		assert(await running, 'Hidden sync failed')
 		assert(
 			hidden && !document.querySelector('.modal.omni-sync-progress-modal'),
 			'Hidden sync reopened at completion',

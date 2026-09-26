@@ -34,7 +34,7 @@ async function fixture() {
 			throw new Error('Local edit detected')
 	}
 	const local: LocalSyncIO = {
-		read: async (path) => files.get(path)?.slice(0),
+		read: vi.fn(async (path) => files.get(path)?.slice(0)),
 		write: vi.fn(async (path, data, hash) => {
 			await check(path, hash)
 			files.set(path, data.slice(0))
@@ -104,6 +104,133 @@ async function fixture() {
 }
 
 describe('complete S3 sync execution', () => {
+	it('needs only one listing and one local read per file for an unchanged vault', async () => {
+		const f = await fixture()
+		for (let index = 0; index < 20; index++) {
+			f.files.set(`${index}.md`, bytes('memo'))
+			f.put(`${index}.md`, 'memo')
+		}
+		for (const item of await f.plan()) await f.engine.execute(item)
+		const baseline = structuredClone(f.state())
+		f.cloud.requests.length = 0
+		vi.mocked(f.local.read).mockClear()
+		vi.mocked(f.persistence.save).mockClear()
+		const plan = await f.plan()
+		expect(plan.every((item) => item.action === 'equal')).toBe(true)
+		expect(plan.some((item) => f.engine.needsBaselineRefresh(item))).toBe(false)
+		await f.engine.validate(plan)
+		for (const item of plan) await f.engine.execute(item)
+		expect(f.cloud.requests).toHaveLength(1)
+		expect(new URL(f.cloud.requests[0].url).searchParams.get('list-type')).toBe(
+			'2',
+		)
+		expect(f.local.read).toHaveBeenCalledTimes(20)
+		expect(f.persistence.save).not.toHaveBeenCalled()
+		expect(f.state()).toEqual(baseline)
+	})
+
+	it('checks each side once to establish a new common baseline', async () => {
+		const f = await fixture()
+		f.files.set('note.md', bytes('memo'))
+		f.put('note.md', 'memo')
+		const [item] = await f.plan()
+		expect(f.engine.needsBaselineRefresh(item)).toBe(true)
+		f.cloud.requests.length = 0
+		vi.mocked(f.local.read).mockClear()
+		await f.engine.execute(item)
+		expect(f.cloud.requests.map((request) => request.method)).toEqual(['HEAD'])
+		expect(f.local.read).toHaveBeenCalledTimes(1)
+		expect(f.state().records['note.md'].text).toBe('memo')
+		expect(f.persistence.backup).not.toHaveBeenCalled()
+		expect(f.persistence.journal).not.toHaveBeenCalled()
+	})
+
+	it.each(['local', 'remote'])(
+		'rejects a stale new baseline after a %s edit',
+		async (side) => {
+			const f = await fixture()
+			f.files.set('note.md', bytes('memo'))
+			f.put('note.md', 'memo')
+			const [item] = await f.plan()
+			if (side === 'local') f.files.set('note.md', bytes('edit'))
+			else f.put('note.md', 'edit')
+			await expect(f.engine.execute(item)).rejects.toThrow(
+				'changed since preview',
+			)
+			expect(f.persistence.save).not.toHaveBeenCalled()
+		},
+	)
+
+	it.each(['local', 'remote'])(
+		'retains the baseline so a late %s edit is detected on the next scan',
+		async (side) => {
+			const f = await fixture()
+			f.files.set('note.md', bytes('memo'))
+			f.put('note.md', 'memo')
+			await f.engine.execute((await f.plan())[0])
+			const baseline = structuredClone(f.state())
+			const [item] = await f.plan()
+			if (side === 'local') f.files.set('note.md', bytes('edit'))
+			else f.put('note.md', 'edit')
+			vi.mocked(f.persistence.save).mockClear()
+			f.cloud.requests.length = 0
+			await f.engine.execute(item)
+			expect(f.cloud.requests).toHaveLength(0)
+			expect(f.persistence.save).not.toHaveBeenCalled()
+			expect(f.state()).toEqual(baseline)
+			expect((await f.plan())[0].action).toBe(
+				side === 'local' ? 'upload' : 'download',
+			)
+		},
+	)
+
+	it('refreshes an equal pair that changed together and clears history only after both deletions are checked', async () => {
+		const f = await fixture()
+		f.files.set('note.md', bytes('base'))
+		f.put('note.md', 'base')
+		await f.engine.execute((await f.plan())[0])
+		f.files.set('note.md', bytes('next'))
+		f.put('note.md', 'next')
+		let [item] = await f.plan()
+		expect(f.engine.needsBaselineRefresh(item)).toBe(true)
+		await f.engine.execute(item)
+		expect(f.state().records['note.md'].text).toBe('next')
+		f.files.delete('note.md')
+		f.cloud.objects.delete('notes/MyNotes/note.md')
+		;[item] = await f.plan()
+		expect(f.engine.needsBaselineRefresh(item)).toBe(true)
+		await f.engine.execute(item)
+		expect(f.state().records['note.md']).toBeUndefined()
+	})
+
+	it('preserves a recorded VersionId when the listing only returns an unchanged ETag', async () => {
+		const f = await fixture()
+		f.files.set('note.md', bytes('memo'))
+		f.put('note.md', 'memo')
+		await f.engine.execute((await f.plan())[0])
+		f.state().records['note.md'].version!.versionId = 'recorded-version'
+		const [item] = await f.plan()
+		expect(item.remote?.version?.versionId).toBeUndefined()
+		expect(f.engine.needsBaselineRefresh(item)).toBe(false)
+		await f.engine.execute(item)
+		expect(f.state().records['note.md'].version?.versionId).toBe(
+			'recorded-version',
+		)
+	})
+
+	it('does not save a new baseline when cancelled during its remote check', async () => {
+		const f = await fixture()
+		f.files.set('note.md', bytes('memo'))
+		f.put('note.md', 'memo')
+		const [item] = await f.plan()
+		f.cloud.fail = (request) => {
+			if (request.method === 'HEAD') f.cancel()
+			return undefined
+		}
+		await expect(f.engine.execute(item)).rejects.toThrow('cancelled')
+		expect(f.persistence.save).not.toHaveBeenCalled()
+	})
+
 	it('reports content comparison and preflight progress over included files', async () => {
 		const f = await fixture()
 		f.files.set('a.md', bytes('a'))

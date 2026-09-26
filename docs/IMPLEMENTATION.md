@@ -2,9 +2,17 @@
 
 ## Delivered scope
 
-JASync 0.2.4 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.5 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.5 — Avoid repeated checks of unchanged files
+
+A known equal pair now retains its existing baseline without further HEAD requests, local reads or history writes. The fast path requires matching content hashes, sizes and remote ETag; a supplied VersionId must also match. Missing VersionId in an S3 listing does not invalidate a recorded version. Planning still hashes local content and requires a complete listing. Later edits do not get marked synchronized: the old baseline remains unchanged and the next scan detects them.
+
+Preflight covers only approved actions that change files. Equal pairs without a matching baseline still receive one fresh local content check and one remote stat before saving history. Both-sided deletion still verifies absence before clearing a record. These record-only actions do not need recovery backups or duplicate pre-write checks. Upload, download, overwrite, deletion and conflict execution retain their existing checks and backups. Capability probes remain per session for runs that need remote mutations.
+
+An established unchanged vault now finishes directly after comparison, without empty Recheck / Verify phases. History progress counts only records needing refresh. A 20-file protocol regression verifies one listing, 20 local reads, zero per-file remote requests and zero history saves; a side-by-side run against the committed 0.2.4 engine confirms total S3 requests drop from 61 to 1 and local reads from 100 to 20, with no history writes in either case. Large listings still require all pages. This is a request-count reduction, not a claim about measured live-cloud latency; first sync and changed files still require network IO.
 
 ## 0.2.4 — Continuous sync progress
 
@@ -69,7 +77,7 @@ Development: macOS arm64, Node 24.20.0, pnpm 9.15.9, Obsidian 1.13.7.
 - Unit tests cover complete pagination, later-page errors, path/Unicode collisions, prefix isolation, binary/empty/range reads, version changes between chunks, mutation signing/receipts, ignored conditions, no retry on lost write responses, upload/download/delete, all five policies, common-base merges, same-size conflicts, selected operations, backup/save failures, corrupt history, staged-write failures and concurrent local edits.
 - `pnpm run build` includes zero-warning ESLint, TypeScript, esbuild, SWC and packaging into `dist/`.
 - `pnpm run test:obsidian -- --native` uses a separate macOS Obsidian profile and temporary synthetic vault. It loads the built production bundle, renders settings/progress, reloads the plugin and exercises real modal selection, cancellation, transfer, overwrite, tracked deletion, target changes, compatibility confirmation/decline and automatic-mode refusal.
-- Final verification: 66 unit-test files / 818 tests passed; 16 native Obsidian checks passed. ESLint, TypeScript, production packaging and `git diff --check` passed.
+- Final verification: 66 unit-test files / 827 tests passed; 16 native Obsidian checks passed. ESLint, TypeScript, production packaging and `git diff --check` passed.
 
 The existing Linux sandbox harness is retained. Earlier Linux runs were blocked before plugin startup by official AppImage/Ubuntu package downloads. The macOS harness avoids those bootstrap dependencies. No personal notes or real cloud objects are used by the integration tests.
 

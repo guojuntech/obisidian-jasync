@@ -180,12 +180,23 @@ export async function runSafeSync(
 				return result
 			}
 			approved = confirmation.tasks as PlannedTask[]
-			emitSyncPreparationProgress({ phase: 'validating' })
 			checkCancelled()
-			plugin.progressService.showProgressModal()
 		}
 		checkCancelled()
 		const actionable = approved.filter((task) => task.item.action !== 'skip')
+		const recordsToUpdate = plan.filter((item) =>
+			engine.needsBaselineRefresh(item),
+		)
+		if (
+			!automatic &&
+			tasks.length &&
+			(actionable.length || recordsToUpdate.length)
+		) {
+			emitSyncPreparationProgress({
+				phase: actionable.length ? 'validating' : 'recording',
+			})
+			plugin.progressService.showProgressModal()
+		}
 		const deletionCount = actionable.filter((task) =>
 			task.item.action.startsWith('delete-'),
 		).length
@@ -255,17 +266,16 @@ export async function runSafeSync(
 				}
 			}
 		}
-		emitSyncPreparationProgress({ phase: 'validating' })
 		// A settings change while the preview was open invalidates the consent.
 		if ((await plugin.createRemoteSession()).identity !== session.identity)
 			throw new Error(i18n.t('s3.targetChanged'))
-		const work = [
-			...actionable.map((task) => task.item),
-			...plan.filter((item) => item.action === 'equal'),
-		]
-		await engine.validate(work, (files) =>
-			emitSyncPreparationProgress({ phase: 'validating', files }),
-		)
+		if (actionable.length) {
+			emitSyncPreparationProgress({ phase: 'validating' })
+			await engine.validate(
+				actionable.map((task) => task.item),
+				(files) => emitSyncPreparationProgress({ phase: 'validating', files }),
+			)
+		}
 		checkCancelled()
 		if (actionable.length) emitStartSync({ showNotice: !automatic })
 		const completed: CompletedTask[] = []
@@ -277,14 +287,13 @@ export async function runSafeSync(
 			completed.push({ task, success: true })
 			emitSyncProgress(actionable.length, [...completed], null)
 		}
-		const unchanged = work.filter((item) => item.action === 'equal')
-		for (const [index, item] of unchanged.entries()) {
+		for (const [index, item] of recordsToUpdate.entries()) {
 			checkCancelled()
 			emitSyncPreparationProgress({
 				phase: 'recording',
 				files: {
 					completed: index,
-					total: unchanged.length,
+					total: recordsToUpdate.length,
 					currentPath: item.path,
 				},
 			})
