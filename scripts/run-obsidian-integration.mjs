@@ -20,9 +20,9 @@ import {
 } from './obsidian-integration-environment.mjs'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const PLUGIN_ID = 'omni-sync'
-const HARNESS_ID = 'omni-sync-integration-harness'
-const RESULT_PATH = '.obsidian/omni-sync-e2e-result.json'
+const PLUGIN_ID = 'jasync'
+const HARNESS_ID = 'jasync-integration-harness'
+const RESULT_PATH = '.obsidian/jasync-e2e-result.json'
 const STARTUP_TIMEOUT_MS = Number.parseInt(
 	process.env.OBSIDIAN_E2E_STARTUP_TIMEOUT_MS ?? '60000',
 	10,
@@ -269,7 +269,7 @@ async function retainGuestArtifacts(sandbox, artifactRoot) {
 			'/root/nutstore-vault/.obsidian/workspace-mobile.json',
 			'workspace-mobile.json',
 		],
-		['/root/nutstore-vault/.obsidian/omni-sync-e2e-result.json', 'result.json'],
+		['/root/nutstore-vault/.obsidian/jasync-e2e-result.json', 'result.json'],
 		['/root/obsidian-profile/obsidian.json', 'obsidian.json'],
 		['/root/obsidian-profile/e2e0000000000001.json', 'vault-profile.json'],
 	]) {

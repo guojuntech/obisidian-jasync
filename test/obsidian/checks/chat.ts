@@ -60,7 +60,7 @@ export async function toleratesCorruptChatMeta(app: App) {
 		JSON.stringify(await backend.readMetaFile()) === JSON.stringify(meta),
 		'Chat meta file did not round-trip',
 	)
-	await app.vault.adapter.write('.agents/omni-sync/chat-meta.json', '[[[')
+	await app.vault.adapter.write('.agents/jasync/chat-meta.json', '[[[')
 	assert(
 		(await backend.readMetaFile()) === null,
 		'Corrupt chat meta file was accepted',

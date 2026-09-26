@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { LEGACY_PLUGIN_ID } from '~/legacy-identity'
 import { S3RemoteStorage } from './s3-storage'
 import { DEFAULT_S3_SETTINGS, normalizeS3Settings } from './settings'
 import type { S3HttpResponse, S3Transport } from './transport'
@@ -28,6 +29,15 @@ const storage = (transport: S3Transport) =>
 	new S3RemoteStorage(settings, transport)
 
 describe('S3 scanning and signing', () => {
+	it('omits current and legacy reserved probes from the sync snapshot', async () => {
+		const listing = page(
+			object('vault/note.md') +
+				object('vault/.jasync-internal/probes/new') +
+				object(`vault/.${LEGACY_PLUGIN_ID}-internal/probes/old`),
+		)
+		const entries = await storage(async () => listing).scanEntries()
+		expect(entries.map((entry) => entry.path)).toEqual(['/note.md'])
+	})
 	it('exhausts 1,001 objects across pages and derives directories', async () => {
 		const transport = vi
 			.fn<S3Transport>()

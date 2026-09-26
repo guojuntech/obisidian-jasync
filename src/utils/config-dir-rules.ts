@@ -1,4 +1,5 @@
 import type JASyncPlugin from '~/index'
+import { LEGACY_PLUGIN_ID } from '~/legacy-identity'
 import GlobMatch, {
 	type GlobFilterRule,
 	type GlobMatchOptions,
@@ -18,13 +19,14 @@ export interface ConfigDirFilterRuleInput {
 }
 
 const CONFIG_DIR_SYSTEM_EXCLUSION_SUFFIXES = [
+	`plugins/${LEGACY_PLUGIN_ID}`,
 	'plugins/**/node_modules',
 	'plugins/**/.git',
 	'plugins/**/.pnpm-store',
-	'plugins/omni-sync/data.local.json',
-	'plugins/omni-sync/data.json',
-	'plugins/omni-sync/cache',
-	'plugins/omni-sync/recovery',
+	'plugins/jasync/data.local.json',
+	'plugins/jasync/data.json',
+	'plugins/jasync/cache',
+	'plugins/jasync/recovery',
 	'workspace',
 	'workspace.json',
 ] as const
@@ -48,9 +50,12 @@ export function getConfigDirSystemFilterRules(
 	configDir: string,
 ): GlobFilterRule[] {
 	return [
-		makeCaseSensitiveRule('/.omni-sync-internal'),
-		makeCaseSensitiveRule('/.omni-sync-internal/**'),
-		makeCaseSensitiveRule('**/*.omni-sync-*.download'),
+		makeCaseSensitiveRule(`/.${LEGACY_PLUGIN_ID}-internal`),
+		makeCaseSensitiveRule(`/.${LEGACY_PLUGIN_ID}-internal/**`),
+		makeCaseSensitiveRule(`**/*.${LEGACY_PLUGIN_ID}-*.download`),
+		makeCaseSensitiveRule('/.jasync-internal'),
+		makeCaseSensitiveRule('/.jasync-internal/**'),
+		makeCaseSensitiveRule('**/*.jasync-*.download'),
 		...CONFIG_DIR_SYSTEM_EXCLUSION_SUFFIXES.flatMap((suffix) => [
 			makeCaseSensitiveRule(`${configDir}/${suffix}`),
 			makeCaseSensitiveRule(`${configDir}/${suffix}/**`),
@@ -130,7 +135,7 @@ export function computeEffectiveFilterRulesFromParts(
 
 /**
  * Returns true if `path` points to a file or folder inside this plugin's own
- * directory `<configDir>/plugins/omni-sync/` (or that directory itself).
+ * directory `<configDir>/plugins/jasync/` (or that directory itself).
  *
  * The plugin must never delete its own files during sync — when the remote
  * vault simply does not have the plugin installed, the local plugin files
@@ -138,7 +143,7 @@ export function computeEffectiveFilterRulesFromParts(
  * self-deletion.
  */
 export function isPluginSelfPath(path: string, configDir: string): boolean {
-	const pluginDir = `${configDir}/plugins/omni-sync`
+	const pluginDir = `${configDir}/plugins/jasync`
 	return path === pluginDir || path.startsWith(`${pluginDir}/`)
 }
 

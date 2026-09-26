@@ -4,14 +4,13 @@ import type { PersistedChatSession } from '~/ai/chat/session/session-persistence
 import { SyncRecordModel } from '~/model/sync-record.model'
 import useStorage from './use-storage'
 
-// Stable storage ID: preserve existing records across product renames.
-const DB_NAME = 'OmniSync_Plugin_Cache'
+const CACHE_DB_NAME = 'JASync_Plugin_Cache'
 
 function createRecoverableStorage<T>(storeName: string) {
 	return useStorage<T>({
 		getFreshInstance: () =>
 			localforage.createInstance({
-				name: DB_NAME,
+				name: CACHE_DB_NAME,
 				storeName,
 			}),
 		maxRetries: 1,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { RemoteStorageFileSystem } from './remote-storage'
 import { computeEffectiveFilterRulesFromParts } from '~/utils/config-dir-rules'
+import { LEGACY_PLUGIN_ID } from '~/legacy-identity'
 import type {
 	RemoteScanner,
 	RemoteSnapshot,
@@ -26,21 +27,37 @@ const fs = (scanner: RemoteScanner) =>
 	})
 
 describe('backend-neutral remote filesystem', () => {
+	it('excludes old private state and both generations of temporary files despite includes', async () => {
+		const paths = [
+			`/.obsidian/plugins/${LEGACY_PLUGIN_ID}/data.local.json`,
+			`/.obsidian/plugins/${LEGACY_PLUGIN_ID}/cache/state.json`,
+			'/.obsidian/plugins/jasync/recovery/run/note.md',
+			`/note.md.${LEGACY_PLUGIN_ID}-123.download`,
+			'/note.md.jasync-123.download',
+			`/.${LEGACY_PLUGIN_ID}-internal/probes/123`,
+			'/.jasync-internal/probes/123',
+		]
+		const result = await fs({
+			scan: async () => ({ complete: true, entries: paths.map(file) }),
+		}).walk()
+		expect(result).toHaveLength(paths.length)
+		expect(result.every((entry) => entry.ignored)).toBe(true)
+	})
 	it('keeps ignored credentials visible as ignored, not deleted', async () => {
 		const result = await fs({
 			scan: async () => ({
 				complete: true,
 				entries: [
 					file('/note.md'),
-					file('/.obsidian/plugins/omni-sync/data.local.json'),
-					file('/.obsidian/plugins/omni-sync/data.json'),
+					file('/.obsidian/plugins/jasync/data.local.json'),
+					file('/.obsidian/plugins/jasync/data.json'),
 				],
 			}),
 		}).walk()
 		expect(result.map(({ stat, ignored }) => [stat.path, ignored])).toEqual([
 			['note.md', false],
-			['.obsidian/plugins/omni-sync/data.local.json', true],
-			['.obsidian/plugins/omni-sync/data.json', true],
+			['.obsidian/plugins/jasync/data.local.json', true],
+			['.obsidian/plugins/jasync/data.json', true],
 		])
 	})
 	it('rejects failed and incomplete scans instead of supplying empty state', async () => {

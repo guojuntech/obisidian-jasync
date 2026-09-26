@@ -47,11 +47,11 @@ describe('resolveMarkdownLinkAction', () => {
 	it('extracts the provider id from the provider editor protocol', () => {
 		expect(
 			resolveMarkdownLinkAction({
-				href: 'obsidian://omni-sync/modal/provider-edit?providerId=openai%20compatible',
+				href: 'obsidian://jasync/modal/provider-edit?providerId=openai%20compatible',
 			}),
 		).toEqual({
 			type: 'protocol',
-			href: 'obsidian://omni-sync/modal/provider-edit?providerId=openai%20compatible',
+			href: 'obsidian://jasync/modal/provider-edit?providerId=openai%20compatible',
 			providerId: 'openai compatible',
 		})
 	})

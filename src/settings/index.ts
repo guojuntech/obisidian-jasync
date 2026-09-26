@@ -175,7 +175,7 @@ export const DEFAULT_SETTINGS: JASyncSettings = {
 	syncMode: SyncMode.LOOSE,
 	filterRules: {
 		rules: [
-			'**/*.omni-sync-*.download',
+			'**/*.jasync-*.download',
 			'**/__MACOSX',
 			'**/.DS_Store',
 			'**/.env',

@@ -1,7 +1,7 @@
 {
-	"id": "omni-sync",
+	"id": "jasync",
 	"name": "JASync",
-	"version": "0.2.5",
+	"version": "0.2.6",
 	"minAppVersion": "1.7.2",
 	"description": "S3 synchronization with plan confirmation, conflict handling and recovery backups.",
 	"author": "guojuntech",

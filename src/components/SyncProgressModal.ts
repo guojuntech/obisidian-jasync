@@ -108,7 +108,7 @@ export default class SyncProgressModal extends Modal {
 		this.updateHeader(state, preparationText?.operation, failedCount)
 		this.updateControls(state)
 		this.modalEl.toggleClass(
-			'omni-sync-progress-modal--preparing',
+			'jasync-progress-modal--preparing',
 			state === 'preparing',
 		)
 		const hasStatusDetails =
@@ -145,7 +145,7 @@ export default class SyncProgressModal extends Modal {
 				? Math.min(100, Math.round((files!.completed / files!.total) * 100))
 				: 0
 			this.progressBar.toggleClass(
-				'omni-sync-progress-indeterminate',
+				'jasync-progress-indeterminate',
 				!determinate,
 			)
 			this.progressBar.setCssProps({
@@ -158,7 +158,7 @@ export default class SyncProgressModal extends Modal {
 			return
 		}
 
-		this.progressBar.removeClass('omni-sync-progress-indeterminate')
+		this.progressBar.removeClass('jasync-progress-indeterminate')
 		if (state === 'complete' && progress.total === 0) {
 			this.filesSection.hide()
 		} else {
@@ -212,15 +212,15 @@ export default class SyncProgressModal extends Modal {
 		failedCount = 0,
 	): void {
 		const stateClasses = [
-			'omni-sync-progress__status-icon--preparing',
-			'omni-sync-progress__status-icon--syncing',
-			'omni-sync-progress__status-icon--complete',
-			'omni-sync-progress__status-icon--warning',
-			'omni-sync-progress__status-icon--error',
-			'omni-sync-progress__status-icon--cancelled',
+			'jasync-progress__status-icon--preparing',
+			'jasync-progress__status-icon--syncing',
+			'jasync-progress__status-icon--complete',
+			'jasync-progress__status-icon--warning',
+			'jasync-progress__status-icon--error',
+			'jasync-progress__status-icon--cancelled',
 		]
 		removeClassTokens(this.statusIcon, ...stateClasses)
-		addClassTokens(this.statusIcon, `omni-sync-progress__status-icon--${state}`)
+		addClassTokens(this.statusIcon, `jasync-progress__status-icon--${state}`)
 
 		const icon =
 			state === 'preparing'
@@ -237,7 +237,7 @@ export default class SyncProgressModal extends Modal {
 		this.statusIcon.empty()
 		setIcon(this.statusIcon, icon)
 		this.statusIcon.classList.toggle(
-			'omni-sync-spinning',
+			'jasync-spinning',
 			state === 'preparing' || state === 'syncing',
 		)
 
@@ -331,69 +331,69 @@ export default class SyncProgressModal extends Modal {
 	onOpen() {
 		const { contentEl } = this
 		contentEl.empty()
-		this.modalEl.addClass('omni-sync-progress-modal')
-		contentEl.addClass('omni-sync-progress-modal__content')
+		this.modalEl.addClass('jasync-progress-modal')
+		contentEl.addClass('jasync-progress-modal__content')
 
 		const container = contentEl.createDiv({
-			cls: 'omni-sync-progress',
+			cls: 'jasync-progress',
 		})
 
 		const title = this.titleEl
 		title.empty()
-		title.addClass('omni-sync-progress__native-title')
+		title.addClass('jasync-progress__native-title')
 
 		const heading = title.createDiv({
-			cls: 'omni-sync-progress__heading',
+			cls: 'jasync-progress__heading',
 		})
 		const statusIcon = heading.createDiv({
-			cls: 'omni-sync-progress__status-icon--preparing',
+			cls: 'jasync-progress__status-icon--preparing',
 		})
 		setIcon(statusIcon, 'loader-circle')
 		const titleText = title.createSpan({
-			cls: 'omni-sync-progress__title-text',
+			cls: 'jasync-progress__title-text',
 		})
 		titleText.setText(i18n.t('sync.progressTitle'))
 
 		const statusSection = container.createDiv({
-			cls: 'omni-sync-progress__status',
+			cls: 'jasync-progress__status',
 		})
 
 		const currentFile = statusSection.createDiv({
-			cls: 'omni-sync-progress__current-file',
+			cls: 'jasync-progress__current-file',
 		})
 
 		const statusMessage = statusSection.createDiv({
-			cls: 'omni-sync-progress__summary',
+			cls: 'jasync-progress__summary',
 		})
 		statusMessage.hide()
 
 		const progressCard = container.createDiv({
-			cls: 'omni-sync-progress__card',
+			cls: 'jasync-progress__card',
 		})
 		const progressSection = progressCard.createDiv({
-			cls: 'omni-sync-progress__primary',
+			cls: 'jasync-progress__primary',
 		})
 
 		const progressLabel = progressSection.createDiv({
-			cls: 'omni-sync-progress__label',
+			cls: 'jasync-progress__label',
 		})
 		progressLabel.setText(i18n.t('sync.progressLabel'))
 
 		const progressBarContainer = progressSection.createDiv({
-			cls: 'omni-sync-progress__bar-container',
+			cls: 'jasync-progress__bar-container',
 		})
 
 		const progressBar = progressBarContainer.createDiv({
-			cls: 'omni-sync-progress__bar',
+			cls: 'jasync-progress__bar',
 		})
 
 		const progressText = progressBarContainer.createDiv({
-			cls: 'omni-sync-progress__bar-label',
+			cls: 'jasync-progress__bar-label',
 		})
 
 		// Cache progress section
 		const cacheProgressSection = progressCard.createDiv({
-			cls: 'omni-sync-progress__cache',
+			cls: 'jasync-progress__cache',
 		})
 		this.cacheProgressSection = cacheProgressSection
 		this.cacheProgressSection.hide()
@@ -402,28 +402,28 @@ export default class SyncProgressModal extends Modal {
 		this.cacheCurrentOperation.hide()
 
 		const cacheProgressLabel = cacheProgressSection.createDiv({
-			cls: 'omni-sync-progress__label',
+			cls: 'jasync-progress__label',
 		})
 		cacheProgressLabel.setText(i18n.t('sync.cacheProgressLabel'))
 
 		const cacheProgressBarContainer = cacheProgressSection.createDiv({
-			cls: 'omni-sync-progress__bar-container',
+			cls: 'jasync-progress__bar-container',
 		})
 		cacheProgressBarContainer.hide()
 
 		this.cacheProgressBar = cacheProgressBarContainer.createDiv({
-			cls: 'omni-sync-progress__bar',
+			cls: 'jasync-progress__bar',
 		})
 		this.cacheProgressText = cacheProgressBarContainer.createDiv({
-			cls: 'omni-sync-progress__bar-label',
+			cls: 'jasync-progress__bar-label',
 		})
 
 		const filesSection = container.createDiv({
-			cls: 'omni-sync-progress__files',
+			cls: 'jasync-progress__files',
 		})
 
 		const filesList = filesSection.createDiv({
-			cls: 'omni-sync-progress__files-list',
+			cls: 'jasync-progress__files-list',
 		})
 
 		this.progressTitle = titleText
@@ -438,7 +438,7 @@ export default class SyncProgressModal extends Modal {
 		this.filesSection = filesSection
 
 		const footerButtons = container.createDiv({
-			cls: 'omni-sync-progress__footer',
+			cls: 'jasync-progress__footer',
 		})
 
 		const stopButton = new ButtonComponent(footerButtons)
@@ -459,10 +459,10 @@ export default class SyncProgressModal extends Modal {
 		this.updateMtimeSubscription.unsubscribe()
 		const { contentEl } = this
 		contentEl.empty()
-		contentEl.removeClass('omni-sync-progress-modal__content')
+		contentEl.removeClass('jasync-progress-modal__content')
 		this.titleEl.empty()
-		this.titleEl.removeClass('omni-sync-progress__native-title')
-		this.modalEl.removeClass('omni-sync-progress-modal')
+		this.titleEl.removeClass('jasync-progress__native-title')
+		this.modalEl.removeClass('jasync-progress-modal')
 		if (this.closeCallback) {
 			this.closeCallback()
 		}

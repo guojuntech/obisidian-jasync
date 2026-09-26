@@ -1,12 +1,12 @@
 @unocss;
 
-.workspace-leaf-content[data-type='omni-sync-chatbox'] .view-content {
+.workspace-leaf-content[data-type='jasync-chatbox'] .view-content {
 	padding-right: 0;
 	padding-left: 0;
 	padding-top: 0;
 }
 
-@keyframes omni-sync-spin {
+@keyframes jasync-spin {
 	from {
 		transform: rotate(0deg);
 	}
@@ -15,8 +15,8 @@
 	}
 }
 
-.omni-sync-spinning {
-	animation: omni-sync-spin 2s linear infinite;
+.jasync-spinning {
+	animation: jasync-spin 2s linear infinite;
 }
 
 .jasync-sync-ribbon--syncing {
@@ -26,7 +26,7 @@
 .jasync-sync-ribbon--syncing .jasync-sync-icon__arrows {
 	transform-box: view-box;
 	transform-origin: center;
-	animation: omni-sync-spin 2s linear infinite reverse;
+	animation: jasync-spin 2s linear infinite reverse;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -50,16 +50,16 @@
 	flex: 0 0 auto;
 }
 
-.modal.omni-sync-progress-modal {
+.modal.jasync-progress-modal {
 	width: min(560px, calc(100vw - 2rem));
 	max-height: calc(100% - 2rem);
 }
 
-.modal-content.omni-sync-progress-modal__content {
+.modal-content.jasync-progress-modal__content {
 	padding: 0;
 }
 
-.omni-sync-progress {
+.jasync-progress {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
@@ -67,17 +67,17 @@
 	max-height: 75vh;
 }
 
-.omni-sync-progress-modal--preparing .omni-sync-progress {
+.jasync-progress-modal--preparing .jasync-progress {
 	min-height: 0;
 }
 
-.modal.omni-sync-progress-modal .modal-header {
+.modal.jasync-progress-modal .modal-header {
 	display: flex;
 	align-items: center;
 	padding: 1.25rem 1.5rem;
 }
 
-.modal.omni-sync-progress-modal .modal-title.omni-sync-progress__native-title {
+.modal.jasync-progress-modal .modal-title.jasync-progress__native-title {
 	display: flex;
 	align-items: center;
 	gap: 0.875rem;
@@ -86,7 +86,7 @@
 	margin: 0;
 }
 
-.omni-sync-progress__heading {
+.jasync-progress__heading {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -98,12 +98,12 @@
 	color: var(--interactive-accent);
 }
 
-.omni-sync-progress__status-icon--preparing,
-.omni-sync-progress__status-icon--syncing,
-.omni-sync-progress__status-icon--complete,
-.omni-sync-progress__status-icon--warning,
-.omni-sync-progress__status-icon--error,
-.omni-sync-progress__status-icon--cancelled {
+.jasync-progress__status-icon--preparing,
+.jasync-progress__status-icon--syncing,
+.jasync-progress__status-icon--complete,
+.jasync-progress__status-icon--warning,
+.jasync-progress__status-icon--error,
+.jasync-progress__status-icon--cancelled {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -111,35 +111,35 @@
 	height: 1.375rem;
 }
 
-.omni-sync-progress__status-icon--preparing,
-.omni-sync-progress__status-icon--syncing {
+.jasync-progress__status-icon--preparing,
+.jasync-progress__status-icon--syncing {
 	color: var(--interactive-accent);
 }
 
-.omni-sync-progress__status-icon--complete {
+.jasync-progress__status-icon--complete {
 	color: var(--text-success);
 }
 
-.omni-sync-progress__status-icon--warning {
+.jasync-progress__status-icon--warning {
 	color: var(--text-warning);
 }
 
-.omni-sync-progress__status-icon--error,
-.omni-sync-progress__status-icon--cancelled {
+.jasync-progress__status-icon--error,
+.jasync-progress__status-icon--cancelled {
 	color: var(--text-error);
 }
 
-.omni-sync-progress__status-icon--preparing svg,
-.omni-sync-progress__status-icon--syncing svg,
-.omni-sync-progress__status-icon--complete svg,
-.omni-sync-progress__status-icon--warning svg,
-.omni-sync-progress__status-icon--error svg,
-.omni-sync-progress__status-icon--cancelled svg {
+.jasync-progress__status-icon--preparing svg,
+.jasync-progress__status-icon--syncing svg,
+.jasync-progress__status-icon--complete svg,
+.jasync-progress__status-icon--warning svg,
+.jasync-progress__status-icon--error svg,
+.jasync-progress__status-icon--cancelled svg {
 	width: 1.375rem;
 	height: 1.375rem;
 }
 
-.omni-sync-progress__title-text {
+.jasync-progress__title-text {
 	flex: 1;
 	min-width: 0;
 	overflow: hidden;
@@ -150,14 +150,14 @@
 	white-space: nowrap;
 }
 
-.omni-sync-progress__status {
+.jasync-progress__status {
 	display: flex;
 	flex-direction: column;
 	gap: 0.25rem;
 	margin: 0 1.5rem;
 }
 
-.omni-sync-progress__current-file {
+.jasync-progress__current-file {
 	overflow: hidden;
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
@@ -165,13 +165,13 @@
 	white-space: nowrap;
 }
 
-.omni-sync-progress__summary {
+.jasync-progress__summary {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 	line-height: 1.5;
 }
 
-.omni-sync-progress__card {
+.jasync-progress__card {
 	display: flex;
 	flex-direction: column;
 	gap: 0.625rem;
@@ -182,19 +182,19 @@
 	background: color-mix(in srgb, var(--background-secondary) 38%, transparent);
 }
 
-.omni-sync-progress__label {
+.jasync-progress__label {
 	font-weight: 600;
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 }
 
-.omni-sync-progress__primary {
+.jasync-progress__primary {
 	display: flex;
 	flex-direction: column;
 	gap: 0.625rem;
 }
 
-.omni-sync-progress__bar-container {
+.jasync-progress__bar-container {
 	position: relative;
 	height: 1.25rem;
 	overflow: hidden;
@@ -202,7 +202,7 @@
 	background: var(--background-secondary);
 }
 
-.omni-sync-progress__bar {
+.jasync-progress__bar {
 	position: absolute;
 	inset-block: 0;
 	left: 0;
@@ -212,7 +212,7 @@
 	transition: width 250ms ease;
 }
 
-.omni-sync-progress__bar-label {
+.jasync-progress__bar-label {
 	position: absolute;
 	inset: 0;
 	display: flex;
@@ -223,7 +223,7 @@
 	font-weight: 600;
 }
 
-.omni-sync-progress__cache {
+.jasync-progress__cache {
 	display: flex;
 	flex-direction: column;
 	margin-top: 0.125rem;
@@ -234,7 +234,7 @@
 	font-size: var(--font-ui-small);
 }
 
-.omni-sync-progress__files {
+.jasync-progress__files {
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
@@ -244,7 +244,7 @@
 	overflow: hidden;
 }
 
-.omni-sync-progress__files-list {
+.jasync-progress__files-list {
 	flex: 1 1 auto;
 	min-height: 5rem;
 	max-height: 32vh;
@@ -255,7 +255,7 @@
 	background: color-mix(in srgb, var(--background-secondary) 24%, transparent);
 }
 
-.omni-sync-progress__footer {
+.jasync-progress__footer {
 	display: flex;
 	justify-content: flex-end;
 	gap: 0.5rem;
@@ -264,7 +264,7 @@
 	border-top: 1px solid var(--background-modifier-border);
 }
 
-.omni-sync-progress__footer button {
+.jasync-progress__footer button {
 	min-width: 5.5rem;
 }
 
@@ -382,29 +382,29 @@
 	color: var(--text-error);
 }
 
-.omni-sync-s3-settings {
-	container: omni-sync-s3 / inline-size;
+.jasync-s3-settings {
+	container: jasync-s3 / inline-size;
 }
 
-.omni-sync-s3-settings .setting-item.omni-sync-s3-field {
+.jasync-s3-settings .setting-item.jasync-s3-field {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
 	gap: var(--size-4-4);
 	align-items: center;
 }
 
-.omni-sync-s3-field .setting-item-info {
+.jasync-s3-field .setting-item-info {
 	margin: 0;
 }
 
-.omni-sync-s3-field .setting-item-control,
-.omni-sync-s3-field .setting-item-control input {
+.jasync-s3-field .setting-item-control,
+.jasync-s3-field .setting-item-control input {
 	width: 100%;
 	min-width: 0;
 }
 
-@container omni-sync-s3 (max-width: 480px) {
-	.omni-sync-s3-settings .setting-item.omni-sync-s3-field {
+@container jasync-s3 (max-width: 480px) {
+	.jasync-s3-settings .setting-item.jasync-s3-field {
 		grid-template-columns: minmax(0, 1fr);
 		gap: var(--size-4-2);
 	}
@@ -923,7 +923,7 @@
 	z-index: 230 !important;
 }
 
-@keyframes omni-sync-progress-indeterminate {
+@keyframes jasync-progress-indeterminate {
 	from {
 		transform: translateX(-100%);
 	}
@@ -933,6 +933,6 @@
 	}
 }
 
-.omni-sync-progress-indeterminate {
-	animation: omni-sync-progress-indeterminate 1.4s ease-in-out infinite;
+.jasync-progress-indeterminate {
+	animation: jasync-progress-indeterminate 1.4s ease-in-out infinite;
 }

@@ -5,7 +5,7 @@ import BaseSettings from './settings.base'
 export default class AccountSettings extends BaseSettings {
 	async display() {
 		this.containerEl.empty()
-		this.containerEl.addClass('omni-sync-s3-settings')
+		this.containerEl.addClass('jasync-s3-settings')
 		new Setting(this.containerEl).setName('S3').setHeading()
 		this.containerEl.createEl('p', { text: i18n.t('s3.syncNotice') })
 		this.containerEl.createEl('p', { text: i18n.t('s3.credentialsNotice') })
@@ -20,7 +20,7 @@ export default class AccountSettings extends BaseSettings {
 		] as const
 		for (const [key, name, placeholder] of fields) {
 			new Setting(this.containerEl)
-				.setClass('omni-sync-s3-field')
+				.setClass('jasync-s3-field')
 				.setName(name)
 				.addText((text) => {
 					text

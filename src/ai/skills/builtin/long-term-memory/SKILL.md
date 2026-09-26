@@ -18,7 +18,7 @@ description: 读取和维护 Agent 与用户跨聊天会话形成的长期记忆
 长期记忆存放在两个地方：
 
 ```
-.agents/omni-sync/memory/
+.agents/jasync/memory/
 ├── archive/                     # 权威记忆：每日一个 Markdown 文件
 │   └── <YYYY>/<YYYY-MM-DD>.md
 └── catalog/                     # 检索目录：每年一个 TSV，可重建
@@ -27,10 +27,10 @@ description: 读取和维护 Agent 与用户跨聊天会话形成的长期记忆
 
 在 bash 文件系统中务必使用以下完整路径，不要构造其他变体：
 
-- `/.agents/omni-sync/memory/archive/<YYYY>/<YYYY-MM-DD>.md`
-- `/.agents/omni-sync/memory/catalog/<YYYY>.tsv`
+- `/.agents/jasync/memory/archive/<YYYY>/<YYYY-MM-DD>.md`
+- `/.agents/jasync/memory/catalog/<YYYY>.tsv`
 
-向用户提及记忆文件时，使用知识库相对路径 `.agents/omni-sync/memory/...`，不要带开头的 `/`。
+向用户提及记忆文件时，使用知识库相对路径 `.agents/jasync/memory/...`，不要带开头的 `/`。
 
 ## 权威性
 
@@ -102,19 +102,19 @@ index: '检索摘要：覆盖当天记录的所有主题与关键内容'
 3. **全部历史目录**：从用户描述中提取 1–3 个区分度最高的名称、对象或关键短语（专有名称、具体对象、关键动作、数字/日期），扫描年度目录：
 
 ```bash
-grep -HniE '检索词a|检索词b|检索词c' /.agents/omni-sync/memory/catalog/*.tsv
+grep -HniE '检索词a|检索词b|检索词c' /.agents/jasync/memory/catalog/*.tsv
 ```
 
 候选行过多时，再做交集过滤：
 
 ```bash
-grep -HniE '检索词a|检索词b' /.agents/omni-sync/memory/catalog/*.tsv | grep -iE '检索词c|检索词d'
+grep -HniE '检索词a|检索词b' /.agents/jasync/memory/catalog/*.tsv | grep -iE '检索词c|检索词d'
 ```
 
 4. **读取原文**：由命中行日期推导路径，读取当日完整记忆：
 
 ```bash
-grep -n '' /.agents/omni-sync/memory/archive/<YYYY>/<YYYY-MM-DD>.md
+grep -n '' /.agents/jasync/memory/archive/<YYYY>/<YYYY-MM-DD>.md
 ```
 
 需要更多背景时才读整个文件，不要无谓地把全部档案读入上下文。
@@ -126,13 +126,13 @@ grep -n '' /.agents/omni-sync/memory/archive/<YYYY>/<YYYY-MM-DD>.md
 1. 扫描全部归档文件的原始 frontmatter `index` 行：
 
 ```bash
-grep -RnE '^index:.*(检索词a|检索词b)' /.agents/omni-sync/memory/archive
+grep -RnE '^index:.*(检索词a|检索词b)' /.agents/jasync/memory/archive
 ```
 
 2. 仍未命中，才扫描正文——全库扫描是最后的恢复路径，低频、昂贵，不是日常检索手段：
 
 ```bash
-grep -RniE '检索词a|检索词b|检索词c' /.agents/omni-sync/memory/archive
+grep -RniE '检索词a|检索词b|检索词c' /.agents/jasync/memory/archive
 ```
 
 一旦上层找到正确文件，立即把对应日期行补齐/重建到 `catalog/<YYYY>.tsv`，让下次命中走正常索引路径。
@@ -149,7 +149,7 @@ grep -RniE '检索词a|检索词b|检索词c' /.agents/omni-sync/memory/archive
 
 重建只从日文件复制而来，不需要理解正文：
 
-1. `find /.agents/omni-sync/memory/archive/<YYYY> -name '*.md'`，列出该年份全部文件；
+1. `find /.agents/jasync/memory/archive/<YYYY> -name '*.md'`，列出该年份全部文件；
 2. 逐个读取 frontmatter，取 `date:` 与 `index:` 两行；
 3. 拼成 `<date><TAB><index>`，重写 `catalog/<YYYY>.tsv`。
 

@@ -1,5 +1,5 @@
 ---
-name: omni-sync-guide
+name: jasync-guide
 description: Explain and operate JASync features—including syncing, plugin settings, AI ChatBox, and MCP server configuration—when users ask for plugin help, setup, or troubleshooting.
 ---
 

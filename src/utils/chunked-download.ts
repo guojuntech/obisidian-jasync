@@ -82,7 +82,7 @@ async function downloadRemoteFileInChunks({
 		mobileAppDownloadFileChunkSize,
 	)
 	const tempPath = normalizePath(
-		`${normalizedLocalPath}.omni-sync-${Date.now()}-${Math.random()
+		`${normalizedLocalPath}.jasync-${Date.now()}-${Math.random()
 			.toString(36)
 			.slice(2)}.download`,
 	)

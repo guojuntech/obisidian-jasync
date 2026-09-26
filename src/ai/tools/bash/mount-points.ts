@@ -3,13 +3,13 @@ import { posix as pathPosix } from 'path-browserify'
 export const VAULT_MOUNT_POINT = '/'
 export const AGENTS_MOUNT_POINT = '/.agents'
 export const AGENTS_VAULT_PATH = '.agents'
-export const JASYNC_AGENTS_MOUNT_POINT = `${AGENTS_MOUNT_POINT}/omni-sync`
-export const JASYNC_AGENTS_VAULT_PATH = `${AGENTS_VAULT_PATH}/omni-sync`
+export const JASYNC_AGENTS_MOUNT_POINT = `${AGENTS_MOUNT_POINT}/jasync`
+export const JASYNC_AGENTS_VAULT_PATH = `${AGENTS_VAULT_PATH}/jasync`
 export const BASH_TMP_VAULT_PATH = `${JASYNC_AGENTS_VAULT_PATH}/tmp`
 export const BASH_TMP_MOUNT_POINT = `/${BASH_TMP_VAULT_PATH}`
 export const BUILTIN_SKILLS_MOUNT_POINT = `${JASYNC_AGENTS_MOUNT_POINT}/builtin-skills`
-export const BUILTIN_SKILLS_RELATIVE_MOUNT_POINT = '/omni-sync/builtin-skills'
-export const SETTINGS_MOUNT_POINT = '/.config/omni-sync'
+export const BUILTIN_SKILLS_RELATIVE_MOUNT_POINT = '/jasync/builtin-skills'
+export const SETTINGS_MOUNT_POINT = '/.config/jasync'
 export const SETTINGS_FILE_PATH = `${SETTINGS_MOUNT_POINT}/settings.json`
 
 /** Virtual aliases kept only for interpreting sessions from older versions. */

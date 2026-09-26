@@ -6,7 +6,7 @@ toggles through the chat.
 ## What this file is
 
 The plugin exposes a whitelist of settings as the virtual file
-`/.config/omni-sync/settings.json`. It is not a real file on disk: it
+`/.config/jasync/settings.json`. It is not a real file on disk: it
 reflects the live plugin settings, and every save is validated and applied on the
 spot. It never contains credentials — account, credential, OAuth responses,
 enterprise base URL, and AI provider API keys are deliberately excluded and can
@@ -15,7 +15,7 @@ never be read or set through it.
 ## Read the current settings first
 
 ```bash
-cat /.config/omni-sync/settings.json
+cat /.config/jasync/settings.json
 ```
 
 Always read the file before proposing or making a change, and preserve the
@@ -28,10 +28,10 @@ their current value. The file must be valid JSON and must include at least one
 supported setting.
 
 - **With bash**: rewrite the file with `jq` or a direct write, for example:
-  `cat /.config/omni-sync/settings.json | jq '.syncMode = "strict"' > /.config/omni-sync/settings.json`.
+  `cat /.config/jasync/settings.json | jq '.syncMode = "strict"' > /.config/jasync/settings.json`.
   An invalid write fails and changes nothing.
 - **With apply_patch**: read the file first, then update it with a normal
-  `*** Update File: /.config/omni-sync/settings.json` patch.
+  `*** Update File: /.config/jasync/settings.json` patch.
 
 Automatic triggers default off. `confirmBeforeSync` controls the initial policy
 dialog; manual execution always requires approval of a selectable file plan.

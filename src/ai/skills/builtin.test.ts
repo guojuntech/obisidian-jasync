@@ -7,11 +7,11 @@ import {
 
 describe('built-in Skills', () => {
 	it('ships a self-consistent JASync guide', () => {
-		const skill = BUILTIN_SKILLS.find((item) => item.name === 'omni-sync-guide')
+		const skill = BUILTIN_SKILLS.find((item) => item.name === 'jasync-guide')
 
 		expect(skill).toBeDefined()
-		expect(skill!.path).toBe(`${BUILTIN_SKILLS_ROOT}/omni-sync-guide/SKILL.md`)
-		expect(skill!.content).toContain('\nname: omni-sync-guide\n')
+		expect(skill!.path).toBe(`${BUILTIN_SKILLS_ROOT}/jasync-guide/SKILL.md`)
+		expect(skill!.content).toContain('\nname: jasync-guide\n')
 		expect(skill!.content).toContain(`description: ${skill!.description}\n`)
 		expect(skill!.content).toContain('MCP server configuration')
 		expect(skill!.resources?.map((resource) => resource.path)).toEqual([
@@ -26,16 +26,16 @@ describe('built-in Skills', () => {
 	it('mounts JASync references below the guide', async () => {
 		const fs = await createBuiltinSkillsFs()
 		const [mcpContent, settingsContent, syncContent] = await Promise.all([
-			fs.readFile('/omni-sync-guide/references/mcp-servers.md'),
-			fs.readFile('/omni-sync-guide/references/settings.md'),
-			fs.readFile('/omni-sync-guide/references/sync.md'),
+			fs.readFile('/jasync-guide/references/mcp-servers.md'),
+			fs.readFile('/jasync-guide/references/settings.md'),
+			fs.readFile('/jasync-guide/references/sync.md'),
 		])
 
 		expect(mcpContent).toContain('MCP Server Configuration')
-		expect(mcpContent).toContain('/.agents/omni-sync/mcp.json')
+		expect(mcpContent).toContain('/.agents/jasync/mcp.json')
 		expect(settingsContent).toContain('Plugin Settings File')
 		expect(settingsContent).toContain('filterRules')
-		expect(settingsContent).toContain('/.config/omni-sync/settings.json')
+		expect(settingsContent).toContain('/.config/jasync/settings.json')
 		expect(syncContent).toContain('Sync policies')
 		expect(syncContent).toContain('Diff3')
 	})

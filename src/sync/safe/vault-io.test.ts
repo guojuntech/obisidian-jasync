@@ -16,7 +16,7 @@ function fixture() {
 	const folders = new Set([
 		'.obsidian',
 		'.obsidian/plugins',
-		'.obsidian/plugins/omni-sync',
+		'.obsidian/plugins/jasync',
 	])
 	const write = vi.fn(async (path: string, data: ArrayBuffer) => {
 		files.set(path, data.slice(0))
@@ -74,7 +74,7 @@ function fixture() {
 		),
 		persistence: new VaultSyncPersistence(
 			vault as unknown as Vault,
-			'.obsidian/plugins/omni-sync',
+			'.obsidian/plugins/jasync',
 			'target',
 		),
 	}
@@ -136,7 +136,7 @@ it('only trashes the approved file and refuses changed content', async () => {
 
 it('preserves malformed history and rejects unsafe paths and corrupt merge bases', async () => {
 	const f = fixture()
-	const path = '.obsidian/plugins/omni-sync/cache/sync-v2-target.json'
+	const path = '.obsidian/plugins/jasync/cache/sync-v2-target.json'
 	f.files.set(path, bytes('{broken'))
 	await expect(f.persistence.load()).rejects.toThrow()
 	expect(text(f.files.get(path)!)).toBe('{broken')

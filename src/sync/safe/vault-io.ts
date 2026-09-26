@@ -28,7 +28,7 @@ export class VaultSyncIO implements LocalSyncIO {
 	async write(path: string, data: ArrayBuffer, expectedHash?: string) {
 		validateRelativePath(path)
 		await mkdirsVault(this.vault, dirname(path))
-		const temp = `${path}.omni-sync-${crypto.randomUUID()}.download`
+		const temp = `${path}.jasync-${crypto.randomUUID()}.download`
 		try {
 			await this.vault.adapter.writeBinary(temp, data)
 			const staged = await this.vault.adapter.readBinary(temp)

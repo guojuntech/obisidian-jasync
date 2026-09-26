@@ -36,7 +36,7 @@ import {
 } from './markdown-link-handler'
 import { mountChatbox } from '../components/solid-js'
 
-export const CHATBOX_VIEW_TYPE = 'omni-sync-chatbox'
+export const CHATBOX_VIEW_TYPE = 'jasync-chatbox'
 
 function normalizeDroppedVaultPath(path: string): string | null {
 	let value = path.trim()

@@ -1,6 +1,6 @@
 # JASync 设计与实现状态
 
-更新时间：2026-09-26。本文对应 **JASync 0.2.5**，记录已实现行为与剩余边界。产品为 Obsidian 的 S3 同步插件，仓库为 `obsidian-omni-sync`。
+更新时间：2026-09-27。本文对应 **JASync 0.2.6**，记录已实现行为与剩余边界。产品为 Obsidian 的 S3 同步插件，开发目录与包名为 `obsidian-jasync`；当前 GitHub 远端为 `guojuntech/obisidian-jasync`，沿用现有仓库名。
 
 ## 1. 当前决策
 
@@ -10,7 +10,7 @@
 - 移植 Alipan 的 RemoteStorage 抽象方式；不接入阿里云盘。
 - 移除坚果云 SSO、`@nutstore/sso-js`、WebDAV、专属增量 API、远端遍历缓存、企业地址设置和 AI 网关。
 - 保留用户自行配置的通用 AI/MCP 代码，不再依赖坚果云账号或网关；当前隐藏 AI 设置页和左侧 Open ChatBox 按钮。
-- 插件显示名称为 JASync；仓库名仍为 `obsidian-omni-sync`，插件 ID 继续使用 `omni-sync`。配置目录、数据库和同步记录身份保持兼容。
+- 插件显示名称为 JASync，包名为 `obsidian-jasync`，插件 ID 为 `jasync`。0.2.6 统一配置目录、协议、样式和内部命名，采用全新安装，不迁移旧版配置、缓存或同步记录。
 
 此前文档中“先适配并保留 Nutstore 后端”的方案被上述决定替代；仍保留上游 Git 历史，便于吸收后续改进。
 
@@ -31,7 +31,7 @@
 | P3   | 安全执行、条件写删、复核、恢复与精确记录                | 已实现；手动确认后按文件执行，失败即停止                      |
 | P4   | 移动端、兼容服务、性能与发布验收                        | 待完成，不声明所有兼容 S3 服务均已验证                        |
 
-**当前 0.2.5 已开放同步执行。** 手动同步在存在待审核项目时显示可勾选计划，确认后执行；关闭或取消计划不会写入。全部文件一致且已有匹配的共同基准时，扫描比对后直接完成；仅首次建立或需要更新的共同基准继续校验并保存记录。自动同步默认关闭，并对冲突、批量删除及不支持条件写入的服务保留手动审核。
+**当前 0.2.6 已开放同步执行。** 手动同步在存在待审核项目时显示可勾选计划，确认后执行；关闭或取消计划不会写入。全部文件一致且已有匹配的共同基准时，扫描比对后直接完成；仅首次建立或需要更新的共同基准继续校验并保存记录。自动同步默认关闭，并对冲突、批量删除及不支持条件写入的服务保留手动审核。
 
 ## 3. 架构与注入
 
@@ -59,7 +59,7 @@ flowchart TD
 
 `sync/safe/runner.ts` 负责阶段切换、确认、取消和执行编排；`sync/safe/engine.ts` 负责计划、复核、备份和按文件提交记录。`PlannedTask` 仅适配现有文件列表展示，不能通过其 `exec()` 绕过安全执行器。
 
-内部插件、设置和协调器类型已采用 JASync 命名。运行界面不显示 Nutstore 名称；许可与来源说明保留上游署名。产品更名不迁移插件 ID、配置目录、数据库或同步记录身份。
+内部插件、设置和协调器类型已采用 JASync 命名。运行界面不显示 Nutstore 名称；许可与来源说明保留上游署名。0.2.6 将插件 ID、配置目录、数据库、协议链接、视图 ID、样式类、内置帮助及临时文件命名统一为 JASync；按用户决定全新安装，不提供旧状态迁移逻辑。
 
 ## 4. Alipan 抽象移植映射
 
@@ -153,7 +153,7 @@ flowchart TD
 
 [AWS PutObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html) 和 [DeleteObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html) 定义条件写删；兼容服务不一定实现相同语义。[腾讯 COS PUT 文档](https://cloud.tencent.cn/document/product/436/7749) 的 `x-cos-forbid-overwrite` 在开启/暂停版本控制时不生效，不能仅凭服务名称宣称支持。
 
-确认计划后，使用本次专属 `.omni-sync-internal/probes/<UUID>` 对象，同时验证条件成立时成功、不成立时拒绝，并回读核对内容/版本或确认对象不存在；结束时尝试清理该对象。探测中的 HTTP 304 视为未验证支持，不当成写入成功。403 等权限错误直接失败，不作为兼容回退依据。探测路径永不进入笔记同步。
+确认计划后，使用本次专属 `.jasync-internal/probes/<UUID>` 对象，同时验证条件成立时成功、不成立时拒绝，并回读核对内容/版本或确认对象不存在；结束时尝试清理该对象。探测中的 HTTP 304 视为未验证支持，不当成写入成功。403 等权限错误直接失败，不作为兼容回退依据。探测路径永不进入笔记同步。
 
 若所需条件不被支持，手动流程显示第二次明确确认：保留备份并紧邻写入前复核，但其他客户端在检查与写入之间的新修改仍可能被覆盖。用户应暂停其他同步客户端；同意只对本次生效，不存为全局开关。兼容模式仅移除该操作未通过验证的条件头，其他已验证的条件保护继续保留；真实文件的失败写入不自动降级重试。自动同步遇到该情况停止并提示手动审核。此处有意替代早期“永不降级”的设计，以支持用户明确选择的 COS 等服务；不宣称兼容模式具备原子并发保护。
 
@@ -165,15 +165,27 @@ flowchart TD
 
 ## 8. 状态、凭据与隔离
 
-- 产品配置目录：`.obsidian/plugins/omni-sync/`（以实际 configDir 为准）。
+- 产品配置目录：`.obsidian/plugins/jasync/`（以实际 configDir 为准）。
 - S3 配置与凭据保存于本机 `data.local.json`，不进入可同步设置；当前未加密，不宣称密钥保险库能力。
-- 数据库名称：`OmniSync_Plugin_Cache`，不复用上游数据库。
+- 数据库名称：`JASync_Plugin_Cache`，不复用上游或旧版自身数据库，不自动迁移缓存。
+- 0.2.6 按全新插件安装，清理旧版配置、cache 和 recovery 后重新配置 S3，生成新的 vaultId 与同步基准。卸载不删除笔记正文或远端对象；首次同步需审核计划。
+- 旧名称只保留在 `src/legacy-identity.ts` 用于硬排除旧私有目录、临时下载及遗留探测对象，不用于写入或读取旧配置。
 - 同步记录 key 包含本地 vaultId 和连接 identity。identity 哈希包含后端、endpoint、region、bucket、prefix、账号标识和寻址方式，不包含 secret key / session token。
 - 不自动导入旧坚果云同步记录。更换目标不会继承旧目标的删除依据。
 - 配置目录同步强制排除本插件的 `data.json`、`data.local.json`、cache、recovery，以及下载临时文件；用户 include 规则不能覆盖这些系统规则。
 - 读取本地配置失败时保留原文件并报错，不以默认空凭据覆盖损坏文件。
 
 新记录采用 format 2，保存在本插件 cache/sync-v2-<身份哈希>.json；损坏格式和不安全路径直接拒绝。恢复副本不自动过期，用户验收后可手动清理。复制整个 vault 时应为另一设备重新配置本机身份与凭据，不导入旧后端记录。
+
+### 0.2.6：全新安装与多设备部署
+
+新安装只包含 `main.js`、`manifest.json`、`styles.css`、LICENSE 和 NOTICE.md，安装到 `<configDir>/plugins/jasync/`。包内不包含凭据、设备身份、同步记录或恢复副本。插件 ID 由 manifest 决定，安装目录名需与 `jasync` 一致。
+
+从旧 ID 切换的本次操作采用卸载重装：先停止同步并关闭 Obsidian，清理旧插件目录及其配置、缓存、恢复副本和专属数据库，移除旧启用项及快捷键，再安装并启用新插件。这是明确请求下的一次本地清理，发布包不会自动删除旧数据，也不包含清理插件或缓存迁移代码。清理范围不包含笔记正文、其他插件状态或 S3 对象。
+
+首次加载生成新的 vaultId，S3 配置为空，实时、启动及定时同步默认关闭。重新配置同一 Bucket / Prefix 也不会继承旧共同基准：首次扫描需重新比较内容，缺失文件不能直接解释为已删除，同路径内容分歧可能形成冲突。必须检查新计划后再执行，不能将重新安装当作普通增量同步。
+
+其他设备各自安装插件并填写 S3 配置，同步同一笔记库时使用同一 Bucket / Prefix。新空库可先使用普通 Receive Only 下载，完成后切换 Two Way；已有笔记的目标库需审核本地差异。每台设备独立生成身份和记录，不复制其他设备的 `data.local.json`、cache 或 recovery。移动端实机兼容性仍待验证。
 
 ## 9. 交互、验证与维护
 
@@ -211,11 +223,13 @@ flowchart TD
 
 详见 [实施记录](docs/IMPLEMENTATION.md)。上游基线与本次变更分别记录；模拟协议测试不代替真实 S3 和移动端测试。
 
-重点覆盖：分页完整性、路径冲突、前缀边界、条件写删探测、固定版本分块、真实共同基准、勾选/取消、并发编辑、备份失败、状态保存失败及真实 Obsidian Vault 写入。具体执行结果记录在实施记录中。
+重点覆盖：分页完整性、路径冲突、前缀边界、条件写删探测、固定版本分块、真实共同基准、勾选/取消、并发编辑、备份失败、状态保存失败及真实 Obsidian Vault 写入。0.2.6 新增回归验证旧私有状态、两代临时下载及探测对象始终被排除，用户 include 规则不能绕过。原生测试使用新插件 ID 和样式选择器验证加载、设置、进度与同步交互。具体执行结果记录在实施记录中。
 
-0.2.5 在 macOS / Obsidian 1.13.7 下通过 66 个单元测试文件、827 项测试和 16 项原生 Obsidian 集成检查。原生检查使用独立 profile、临时 vault 与模拟 S3 transport，包含未变化文件的请求数量与原记录保留、新基准验证、后续编辑检测、窗口连续性、文件计数、内容比对、能力探测、复核阶段的停止和隐藏。ESLint、TypeScript、生产构建与差异空白检查通过。
+0.2.6 在 macOS / Obsidian 1.13.7 下通过 66 个单元测试文件、829 项测试和 16 项原生 Obsidian 集成检查。原生检查使用独立 profile、临时 vault 与模拟 S3 transport，包含未变化文件的请求数量与原记录保留、新基准验证、后续编辑检测、窗口连续性、文件计数、内容比对、能力探测、复核阶段的停止和隐藏。ESLint、TypeScript、生产构建与差异空白检查通过。
 
-`pnpm run build` 在校验后生成产物，经 SWC 处理的最终 `main.js` 连同 `manifest.json`、`styles.css`、LICENSE 和 NOTICE.md 打包到 `dist/`。构建输出继续按 `.gitignore` 忽略；版本号维护于 package.json、manifest.json 与 versions.json。安装更新仅替换插件产物，保留现有 `data.json`、`data.local.json`、cache 和 recovery；重新启用插件或重启 Obsidian 后加载新代码。
+`pnpm run build` 在校验后生成产物，经 SWC 处理的最终 `main.js` 连同 `manifest.json`、`styles.css`、LICENSE 和 NOTICE.md 打包到 `dist/`，并生成 `jasync-<version>.zip`。ZIP 顶层目录为 `jasync/`，只包含上述五个文件，可直接解压到笔记库的插件目录。构建输出继续按 `.gitignore` 忽略；版本号维护于 package.json、manifest.json 与 versions.json。
+
+旧 ID 切换遵循上文的全新安装方案。此后同一 `jasync` 安装的常规版本更新只替换插件产物，保留该设备的 `data.json`、`data.local.json`、cache 和 recovery；重新启用插件或重启 Obsidian 后加载新代码。Git 提交和 push 只发布源码，不等同于发布 GitHub Release 或上传安装包。
 
 ### 后续维护
 

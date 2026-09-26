@@ -14,7 +14,7 @@ export default class ProtocolService extends BaseService {
 
 	override onload() {
 		this.plugin.registerObsidianProtocolHandler(
-			'omni-sync/modal/provider-edit',
+			'jasync/modal/provider-edit',
 			async (data) => {
 				const providerId =
 					typeof data?.providerId === 'string' ? data.providerId.trim() : ''

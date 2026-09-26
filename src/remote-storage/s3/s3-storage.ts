@@ -1,6 +1,7 @@
 import { AwsClient } from 'aws4fetch'
 import { XMLParser } from 'fast-xml-parser'
 import { SyntaxValidator } from 'fast-xml-validator'
+import { LEGACY_PLUGIN_ID } from '~/legacy-identity'
 import { RemoteStorageError } from '../errors'
 import type { RemoteScanOptions } from '../remote-scanner.interface'
 import RemoteStorage, {
@@ -255,7 +256,11 @@ export class S3RemoteStorage extends RemoteStorage {
 					)
 				keys.add(key)
 				const rawRelative = key.slice(this.settings.prefix.length)
-				if (rawRelative.startsWith('.omni-sync-internal/')) continue
+				if (
+					rawRelative.startsWith('.jasync-internal/') ||
+					rawRelative.startsWith(`.${LEGACY_PLUGIN_ID}-internal/`)
+				)
+					continue
 				if (!rawRelative) {
 					if (object.Size !== '0')
 						throw new RemoteStorageError(
@@ -396,7 +401,7 @@ export class S3RemoteStorage extends RemoteStorage {
 
 	override async verifyMutationSupport(): Promise<MutationSupport> {
 		if (this.mutationSupport) return this.mutationSupport
-		const probeRoot = `${this.settings.prefix}.omni-sync-internal/probes/${crypto.randomUUID()}`
+		const probeRoot = `${this.settings.prefix}.jasync-internal/probes/${crypto.randomUUID()}`
 		const first = new TextEncoder().encode('JASync capability probe A').buffer
 		const second = new TextEncoder().encode(
 			'JASync capability probe B',
@@ -459,7 +464,7 @@ export class S3RemoteStorage extends RemoteStorage {
 				const condition =
 					kind === 'create'
 						? this.createConditionHeaders()
-						: { 'If-Match': '"omnisync-impossible-etag"' }
+						: { 'If-Match': '"jasync-impossible-etag"' }
 				const negative = await attempt(() =>
 					this.request(
 						kind === 'delete' ? 'DELETE' : 'PUT',

@@ -87,7 +87,7 @@ export default class SyncConfirmModal extends Modal {
 			const radio = option.createEl('input', {
 				type: 'radio',
 				value: policy,
-				attr: { name: 'omni-sync-policy' },
+				attr: { name: 'jasync-policy' },
 			})
 			radio.checked = policy === this.selectedPolicy
 			radio.addEventListener('change', () => {

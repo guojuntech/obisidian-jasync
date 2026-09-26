@@ -1,4 +1,4 @@
-const PROVIDER_EDIT_PROTOCOL = 'obsidian://omni-sync/modal/provider-edit'
+const PROVIDER_EDIT_PROTOCOL = 'obsidian://jasync/modal/provider-edit'
 
 export type MarkdownLinkAction =
 	| { type: 'none' }

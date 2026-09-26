@@ -1,7 +1,7 @@
 import type { App } from 'obsidian'
 import { assert } from './assert'
 
-const E2E_ROOT = '.agents/omni-sync/e2e'
+const E2E_ROOT = '.agents/jasync/e2e'
 
 export async function roundTripsVaultAdapterContent(app: App) {
 	const path = `${E2E_ROOT}/中性 sample 🌱.txt`

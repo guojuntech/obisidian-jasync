@@ -1,6 +1,6 @@
 {
-	"name": "obsidian-omni-sync",
-	"version": "0.2.5",
+	"name": "obsidian-jasync",
+	"version": "0.2.6",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

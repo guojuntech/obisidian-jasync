@@ -27,7 +27,7 @@ async function button(pattern: RegExp): Promise<HTMLButtonElement> {
 export async function executesS3Sync(app: App) {
 	const plugin = (
 		app as unknown as { plugins: { plugins: Record<string, JASyncPlugin> } }
-	).plugins.plugins['omni-sync']
+	).plugins.plugins['jasync']
 	assert(plugin, 'JASync not loaded')
 	const originalSettings = plugin.settings
 	const originalLocal = plugin.localSettings
@@ -95,17 +95,17 @@ export async function executesS3Sync(app: App) {
 				`Expected progress for ${phase}`,
 			)
 			plugin.progressService.updateModal.flush()
-			const modal = document.querySelector('.modal.omni-sync-progress-modal')
+			const modal = document.querySelector('.modal.jasync-progress-modal')
 			assert(modal, `Progress disappeared during ${phase}`)
 			assert(
-				modal.querySelector('.omni-sync-progress__status-icon--preparing'),
+				modal.querySelector('.jasync-progress__status-icon--preparing'),
 				`Preparation state missing during ${phase}`,
 			)
 			assert(
-				modal.querySelector('.omni-sync-progress__title-text')?.textContent,
+				modal.querySelector('.jasync-progress__title-text')?.textContent,
 				`Stage title missing during ${phase}`,
 			)
-			const bar = modal.querySelector<HTMLElement>('.omni-sync-progress__bar')
+			const bar = modal.querySelector<HTMLElement>('.jasync-progress__bar')
 			const files = plugin.progressService.preparationProgress?.files
 			const width =
 				files && files.total > 0
@@ -115,7 +115,7 @@ export async function executesS3Sync(app: App) {
 				bar?.style.width === width,
 				`Stage progress bar is incorrect during ${phase}`,
 			)
-			const content = modal.querySelector<HTMLElement>('.omni-sync-progress')
+			const content = modal.querySelector<HTMLElement>('.jasync-progress')
 			assert(
 				content && getComputedStyle(content).minHeight === '0px',
 				'Preparation window retains empty file-list space',
@@ -217,7 +217,7 @@ export async function executesS3Sync(app: App) {
 		)
 		assert(
 			unchangedModal &&
-				document.querySelector('.modal.omni-sync-progress-modal') ===
+				document.querySelector('.modal.jasync-progress-modal') ===
 					unchangedModal,
 			'Unchanged sync replaced its progress window',
 		)
@@ -272,7 +272,7 @@ export async function executesS3Sync(app: App) {
 			'Preflight cancellation did not stop sync',
 		)
 		assert(
-			!document.querySelector('.modal.omni-sync-progress-modal'),
+			!document.querySelector('.modal.jasync-progress-modal'),
 			'Cancelled progress reopened',
 		)
 
@@ -281,7 +281,7 @@ export async function executesS3Sync(app: App) {
 		inspectRequest = async () => {
 			if (hidden) {
 				assert(
-					!document.querySelector('.modal.omni-sync-progress-modal'),
+					!document.querySelector('.modal.jasync-progress-modal'),
 					'Hidden progress reopened',
 				)
 				return
@@ -300,7 +300,7 @@ export async function executesS3Sync(app: App) {
 		await approve()
 		assert(await running, 'Hidden sync failed')
 		assert(
-			hidden && !document.querySelector('.modal.omni-sync-progress-modal'),
+			hidden && !document.querySelector('.modal.jasync-progress-modal'),
 			'Hidden sync reopened at completion',
 		)
 		inspectRequest = undefined

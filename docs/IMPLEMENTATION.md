@@ -1,10 +1,18 @@
-# Implementation notes — 2026-09-26
+# Implementation notes — 2026-09-27
 
 ## Delivered scope
 
-JASync 0.2.5 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.6 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.6 — Unified JASync identity
+
+The plugin ID is `jasync`, package name is `obsidian-jasync`, and the installation directory is `.obsidian/plugins/jasync/`. Protocol links, CSS classes, view IDs, built-in skill paths, agent paths, temporary downloads and S3 probe objects now use the same identity.
+
+Version 0.2.6 is installed fresh after removing the old plugin and its local settings, cache and recovery files. It creates a new vaultId and synchronization baseline. The new `JASync_Plugin_Cache` database does not import legacy caches. Notes and remote objects are not part of uninstall cleanup; the first sync must be reviewed with the new baseline.
+
+The old plugin identifier remains only for hard exclusions: old private plugin data, temporary downloads and reserved probe objects must never become synchronized notes, even under user include rules. All new files, objects, settings and UI identifiers use JASync.
 
 ## 0.2.5 — Avoid repeated checks of unchanged files
 
@@ -30,7 +38,7 @@ The sync ribbon and start-sync command use a theme-aware JA monogram surrounded 
 
 Display branding is now JASync: manifest, English/Chinese ribbon and command labels, notices, errors, log exports, MCP client name and built-in help. Internal plugin/settings/coordinator types and UI classes no longer use Nutstore branding. Source attribution remains in LICENSE/NOTICE and project documentation.
 
-The repository/package name `obsidian-omni-sync`, plugin ID `omni-sync`, plugin/config/cache/recovery paths, database ID, serialized session markers and remote reserved namespace remain unchanged. This is a display/internal-symbol rename, not a new backend identity; it must not reset credentials or deletion/merge history. Newly exported log notes use `jasync/logs/`.
+At this stage only display branding and internal symbols changed; persistent identifiers retained their previous values. Version 0.2.6 replaces the persistent identifiers with a fresh installation. Newly exported log notes use `jasync/logs/`.
 
 ## 0.2.1 — PUT HTTP 304 compatibility fix
 
@@ -50,7 +58,7 @@ The fix treats 304 inside probes as unsupported, verifies positive and negative 
 
 ## Service compatibility
 
-After plan approval, random `.omni-sync-internal/probes/<UUID>` objects test whether the service enforces create/overwrite/delete preconditions. These objects are excluded from synchronization and cleanup is attempted. A cleanup failure may leave a small reserved probe object; no user object is used for testing.
+After plan approval, random `.jasync-internal/probes/<UUID>` objects test whether the service enforces create/overwrite/delete preconditions. These objects are excluded from synchronization and cleanup is attempted. A cleanup failure may leave a small reserved probe object; no user object is used for testing.
 
 If a required condition is ignored or unsupported, manual execution requires a second **per-run** compatibility confirmation. It explains that recovery backups and last-moment version checks cannot prevent a different client from changing an object between the check and the write/delete. Other syncing clients should be paused. Automatic sync never enables this fallback. Permission failures are not treated as unsupported capabilities.
 
@@ -58,7 +66,7 @@ The capability probe and compatibility path support provider differences without
 
 ## Recovery
 
-Recovery is local to the vault under `.obsidian/plugins/omni-sync/recovery/<run UUID>/` (or the configured Obsidian config directory):
+Recovery is local to the vault under `.obsidian/plugins/jasync/recovery/<run UUID>/` (or the configured Obsidian config directory):
 
 - `local/<original path>` contains the local pre-operation bytes.
 - `remote/<original path>` contains the remote pre-operation bytes.
@@ -77,7 +85,7 @@ Development: macOS arm64, Node 24.20.0, pnpm 9.15.9, Obsidian 1.13.7.
 - Unit tests cover complete pagination, later-page errors, path/Unicode collisions, prefix isolation, binary/empty/range reads, version changes between chunks, mutation signing/receipts, ignored conditions, no retry on lost write responses, upload/download/delete, all five policies, common-base merges, same-size conflicts, selected operations, backup/save failures, corrupt history, staged-write failures and concurrent local edits.
 - `pnpm run build` includes zero-warning ESLint, TypeScript, esbuild, SWC and packaging into `dist/`.
 - `pnpm run test:obsidian -- --native` uses a separate macOS Obsidian profile and temporary synthetic vault. It loads the built production bundle, renders settings/progress, reloads the plugin and exercises real modal selection, cancellation, transfer, overwrite, tracked deletion, target changes, compatibility confirmation/decline and automatic-mode refusal.
-- Final verification: 66 unit-test files / 827 tests passed; 16 native Obsidian checks passed. ESLint, TypeScript, production packaging and `git diff --check` passed.
+- Final verification: 66 unit-test files / 829 tests passed; 16 native Obsidian checks passed. ESLint, TypeScript, production packaging and `git diff --check` passed.
 
 The existing Linux sandbox harness is retained. Earlier Linux runs were blocked before plugin startup by official AppImage/Ubuntu package downloads. The macOS harness avoids those bootstrap dependencies. No personal notes or real cloud objects are used by the integration tests.
 

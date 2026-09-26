@@ -109,7 +109,7 @@ it('does not probe or mutate user objects when capability checks encounter permi
 	expect(text(cloud.objects.get('vault/note.md')!)).toBe('original')
 	expect(
 		cloud.requests.every((request) =>
-			request.url.includes('.omni-sync-internal/probes/'),
+			request.url.includes('.jasync-internal/probes/'),
 		),
 	).toBe(true)
 })

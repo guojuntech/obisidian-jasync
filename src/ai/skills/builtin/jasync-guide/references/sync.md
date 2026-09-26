@@ -26,7 +26,7 @@ copy. Local/server priority overwrites the other side after a recovery backup.
 ## Safety and recovery
 
 Changed plans, failed scans/backups and permissions errors stop execution.
-Content is backed up to .obsidian/plugins/omni-sync/recovery/<run>/local/ and
+Content is backed up to .obsidian/plugins/jasync/recovery/<run>/local/ and
 remote/, with per-file journals. Disable automatic sync before restoring a
 chosen backup to its original vault path, then review a new manual plan.
 Recovery copies do not expire automatically and there is no restore UI.

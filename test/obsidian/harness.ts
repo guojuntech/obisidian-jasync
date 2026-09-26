@@ -19,7 +19,7 @@ import {
 	skipsStaleVaultSkillEntries,
 } from './checks/vault'
 
-export const OBSIDIAN_E2E_RESULT_PATH = '.obsidian/omni-sync-e2e-result.json'
+export const OBSIDIAN_E2E_RESULT_PATH = '.obsidian/jasync-e2e-result.json'
 
 interface TestResult {
 	name: string
