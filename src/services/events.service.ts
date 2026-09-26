@@ -13,12 +13,12 @@ import i18n from '~/i18n'
 import { is503Error } from '~/utils/is-503-error'
 import { getSyncPreparationText } from '~/utils/sync-preparation-text'
 import { BaseService } from './service.interface'
-import NutstorePlugin from '..'
+import JASyncPlugin from '..'
 
 export default class EventsService extends BaseService {
 	subscriptions: Subscription[] = []
 
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 	}
 
@@ -26,6 +26,7 @@ export default class EventsService extends BaseService {
 		this.onunload()
 		this.subscriptions = [
 			onPreparingSync().subscribe(({ showNotice }) => {
+				this.plugin.statusService.stopTimeUpdates()
 				this.plugin.toggleSyncUI(true)
 				this.plugin.statusService.updateSyncStatus({
 					text: i18n.t('sync.preparing'),
@@ -64,8 +65,14 @@ export default class EventsService extends BaseService {
 				})
 			}),
 
-			onEndSync().subscribe(({ failedCount, showNotice }) => {
+			onEndSync().subscribe(({ failedCount, showNotice, previewOnly }) => {
 				this.plugin.toggleSyncUI(false)
+				if (previewOnly) {
+					this.plugin.statusService.updateSyncStatus({
+						text: i18n.t('s3.previewComplete'),
+					})
+					return
+				}
 				const now = Date.now()
 				this.plugin.statusService.setLastSyncTime(now, failedCount)
 				if (showNotice && !this.plugin.progressService.hasVisibleSyncModal()) {

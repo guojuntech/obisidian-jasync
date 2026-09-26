@@ -1,3 +1,4 @@
+import { assertProviderApiKeyUsable } from '~/ai/providers/common'
 import type { LanguageModelUsage } from 'ai'
 import { Notice } from 'obsidian'
 import {
@@ -69,7 +70,7 @@ import i18n from '~/i18n'
 import { chatMetaKV, chatSessionKV, type ChatMetaRecord } from '~/storage'
 import { createUniqueWordId } from '~/utils/create-id'
 import logger from '~/utils/logger'
-import type NutstorePlugin from '..'
+import type JASyncPlugin from '..'
 import { BaseService } from './service.interface'
 
 type ChatboxActionHandlers = Pick<
@@ -120,7 +121,7 @@ export default class ChatService extends BaseService {
 	private readonly compactionCoordinator: ContextCompactionCoordinator
 	private readonly skillRepository: SkillRepository
 
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 		this.skillRepository = new SkillRepository(plugin.app)
 		this.selection = new Selection(
@@ -162,8 +163,10 @@ export default class ChatService extends BaseService {
 			() => this.notify(),
 			this.skillRepository,
 		)
-		const ensureProviderReady = (provider: AIProviderConfig) =>
-			plugin.nutstoreLlmGatewayService.ensureProviderReady(provider)
+		const ensureProviderReady = (provider: AIProviderConfig) => {
+			assertProviderApiKeyUsable(provider)
+			return Promise.resolve()
+		}
 		const agentRunner = new AgentRunner(
 			this.toolExecutor,
 			this.store,
@@ -765,9 +768,7 @@ export default class ChatService extends BaseService {
 			try {
 				if (agent.timeline.length > 0) {
 					const provider = this.selection.getProviderOrThrow(session)
-					await this.plugin.nutstoreLlmGatewayService.ensureProviderReady(
-						provider,
-					)
+					assertProviderApiKeyUsable(provider)
 					if (abortController.signal.aborted) {
 						return
 					}

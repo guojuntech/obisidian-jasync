@@ -7,6 +7,7 @@ import { blobStore } from '~/storage/blob'
 import { formatLocalTimestampForFilename } from '~/utils/local-date'
 import logger from '~/utils/logger'
 import logsStringify from '~/utils/logs-stringify'
+import { mkdirsVault } from '~/utils/mkdirs-vault'
 import BaseSettings from './settings.base'
 
 export default class TroubleshootingSettings extends BaseSettings {
@@ -114,15 +115,12 @@ export default class TroubleshootingSettings extends BaseSettings {
 		try {
 			const now = new Date()
 			const timestamp = formatLocalTimestampForFilename(now)
-			const fileName = `nutstore-logs-${timestamp}.md`
-			const dirPath = 'nutstore-sync/logs'
+			const fileName = `jasync-logs-${timestamp}.md`
+			const dirPath = 'jasync/logs'
 			const filePath = `${dirPath}/${fileName}`
-			const content = `# Nutstore Plugin Logs\n\nGenerated at: ${now.toLocaleString()}\n\nPlugin version: ${this.plugin.manifest.version}\n\n---\n\n${this.logs}`
+			const content = `# JASync Logs\n\nGenerated at: ${now.toLocaleString()}\n\nPlugin version: ${this.plugin.manifest.version}\n\n---\n\n${this.logs}`
 
-			const folderExists = await this.app.vault.adapter.exists(dirPath)
-			if (!folderExists) {
-				await this.app.vault.adapter.mkdir(dirPath)
-			}
+			await mkdirsVault(this.app.vault, dirPath)
 
 			const file = await this.app.vault.create(filePath, content)
 			new Notice(i18n.t('settings.log.savedToNote', { fileName: filePath }))

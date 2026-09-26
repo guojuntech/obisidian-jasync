@@ -1,27 +1,26 @@
 import { Notice } from 'obsidian'
-import { CHATBOX_AI_ICON_ID } from '~/assets/icons/obsidian-nutstore-ai-icon'
+import { JASYNC_SYNC_ICON_ID } from '~/assets/icons/jasync-sync-icon'
 import { addClassTokens, removeClassTokens } from '~/utils/class-tokens'
 import logger from '~/utils/logger'
 import { emitCancelSync } from '../events'
 import i18n from '../i18n'
-import type NutstorePlugin from '../index'
+import type JASyncPlugin from '../index'
 import { BaseService } from '../services/service.interface'
 import { SyncStartMode } from '../sync'
 import { type SyncPolicy } from '../settings'
-import { CHATBOX_VIEW_TYPE } from '../views/chatbox.view'
 import SyncConfirmModal from './SyncConfirmModal'
 
 export class SyncRibbonManager extends BaseService {
 	private startRibbonEl: HTMLElement | null = null
 	private stopRibbonEl: HTMLElement | null = null
 
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 	}
 
 	override onload() {
 		this.startRibbonEl = this.plugin.addRibbonIcon(
-			'refresh-ccw',
+			JASYNC_SYNC_ICON_ID,
 			i18n.t('sync.startButton'),
 			async () => {
 				if (this.plugin.isSyncing) {
@@ -65,31 +64,14 @@ export class SyncRibbonManager extends BaseService {
 			},
 		)
 
+		this.startRibbonEl.addClass('jasync-sync-ribbon')
+
 		this.stopRibbonEl = this.plugin.addRibbonIcon(
 			'square',
 			i18n.t('sync.stopButton'),
 			() => emitCancelSync(),
 		)
 		addClassTokens(this.stopRibbonEl, ':uno: hidden')
-
-		this.plugin.addRibbonIcon(
-			CHATBOX_AI_ICON_ID,
-			i18n.t('chatbox.openCommand'),
-			() => {
-				void this.openChatbox()
-			},
-		)
-	}
-
-	private async openChatbox() {
-		const existingLeaf =
-			this.plugin.app.workspace.getLeavesOfType(CHATBOX_VIEW_TYPE)[0]
-		const leaf = existingLeaf || this.plugin.app.workspace.getRightLeaf(false)
-		if (!leaf) {
-			return
-		}
-		await leaf.setViewState({ type: CHATBOX_VIEW_TYPE, active: true })
-		void this.plugin.app.workspace.revealLeaf(leaf)
 	}
 
 	public update() {
@@ -98,11 +80,11 @@ export class SyncRibbonManager extends BaseService {
 		}
 		if (this.plugin.isSyncing) {
 			this.startRibbonEl.setAttr('aria-disabled', 'true')
-			this.startRibbonEl.addClass('nutstore-sync-spinning')
+			this.startRibbonEl.addClass('jasync-sync-ribbon--syncing')
 			removeClassTokens(this.stopRibbonEl, ':uno: hidden')
 		} else {
 			this.startRibbonEl.removeAttribute('aria-disabled')
-			this.startRibbonEl.removeClass('nutstore-sync-spinning')
+			this.startRibbonEl.removeClass('jasync-sync-ribbon--syncing')
 			addClassTokens(this.stopRibbonEl, ':uno: hidden')
 		}
 	}

@@ -15,6 +15,7 @@ import SkippedTask, { SkipReason } from '~/sync/tasks/skipped.task'
 import { BaseTask } from '~/sync/tasks/task.interface'
 
 export default function getTaskName(task: BaseTask) {
+	if (task.displayName) return task.displayName
 	if (task instanceof CleanRecordTask) {
 		return i18n.t('sync.fileOp.cleanRecord')
 	}

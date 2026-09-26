@@ -10,8 +10,31 @@ export function getSyncPreparationText(
 	progress: SyncPreparationProgress,
 ): SyncPreparationText {
 	const traversal = progress.traversal
+	const fileDetail = progress.files
+		? i18n.t('sync.preparation.fileStats', {
+				completed: progress.files.completed,
+				total: progress.files.total,
+			})
+		: ''
 
 	switch (progress.phase) {
+		case 'scanningLocal':
+			return { operation: i18n.t('sync.preparation.scanningLocal'), detail: '' }
+		case 'checkingCapabilities':
+			return {
+				operation: i18n.t('sync.preparation.checkingCapabilities'),
+				detail: i18n.t('sync.preparation.capabilitiesDetail'),
+			}
+		case 'validating':
+			return {
+				operation: i18n.t('sync.preparation.validating'),
+				detail: fileDetail || i18n.t('sync.preparation.validatingDetail'),
+			}
+		case 'recording':
+			return {
+				operation: i18n.t('sync.preparation.recording'),
+				detail: fileDetail,
+			}
 		case 'checkingRemote':
 			return {
 				operation: i18n.t('sync.preparation.checkingRemote'),
@@ -25,7 +48,7 @@ export function getSyncPreparationText(
 		case 'analyzing':
 			return {
 				operation: i18n.t('sync.preparation.analyzing'),
-				detail: '',
+				detail: fileDetail || i18n.t('sync.preparation.analyzingDetail'),
 			}
 		case 'savingCache':
 			return {
@@ -47,6 +70,16 @@ export function getSyncPreparationText(
 		return {
 			operation: i18n.t('sync.preparation.retryingRemote'),
 			detail: traversal.currentPath ?? '',
+		}
+	}
+
+	if (traversal.processedPages !== undefined) {
+		return {
+			operation: i18n.t('s3.scanning'),
+			detail: i18n.t('s3.scanProgress', {
+				pages: traversal.processedPages,
+				items: traversal.discoveredItems,
+			}),
 		}
 	}
 

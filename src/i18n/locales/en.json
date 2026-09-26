@@ -8,57 +8,13 @@
 			"desc": "Select interface language",
 			"auto": "Auto detect"
 		},
-		"account": {
-			"name": "Account",
-			"desc": "Enter your WebDAV account",
-			"placeholder": "Enter your account"
-		},
-		"credential": {
-			"name": "Credential",
-			"desc": "Enter the app password you created in Nutstore (Account info → Security options), not your login password.",
-			"placeholder": "Your Nutstore app password"
-		},
 		"checkConnection": {
 			"name": "Check connection",
-			"desc": "Click to check WebDAV connection",
-			"success": "WebDAV connection successful",
-			"failure": "WebDAV connection failed",
+			"desc": "Click to check S3 connection",
+			"success": "S3 connection successful",
+			"failure": "S3 connection failed",
 			"successButton": "Connected ✓",
 			"failureButton": "Failed ×"
-		},
-		"remoteDir": {
-			"name": "Remote directory",
-			"desc": "Which Nutstore folder this vault syncs with. Use the folder button to pick one visually.",
-			"placeholder": "e.g. /MyNotes"
-		},
-		"login": {
-			"name": "Login",
-			"success": "Login successful",
-			"failure": "Login failed, please try again"
-		},
-		"loginMode": {
-			"name": "Login mode",
-			"manual": "Manual input",
-			"sso": "Single sign-on"
-		},
-		"enterpriseBaseUrl": {
-			"name": "Nutstore Enterprise",
-			"desc": "Optional Base URL for Nutstore Enterprise. Leave empty to use the default endpoint. Example: https://dav.jianguoyun.com",
-			"action": "Set",
-			"modalTitle": "Set Nutstore Enterprise Base URL",
-			"placeholder": "For example https://dav.jianguoyun.com",
-			"invalid": "Invalid Base URL",
-			"invalidWithReason": "Invalid Base URL: {{reason}}",
-			"errors": {
-				"invalidFormat": "enter a complete server address, for example: https://dav.jianguoyun.com",
-				"unsupportedProtocol": "the address must start with http:// or https://"
-			}
-		},
-		"ssoStatus": {
-			"loggedIn": "Logged in",
-			"notLoggedIn": "Not logged in",
-			"logout": "Logout",
-			"logoutSuccess": "Logged out successfully"
 		},
 		"backupWarning": {
 			"name": "Backup warning",
@@ -66,19 +22,19 @@
 		},
 		"conflictStrategy": {
 			"name": "Conflict resolution strategy",
-			"desc": "Choose how to resolve file conflicts. \nNote: We recommend backing up important files before using auto-merge to prevent data loss.",
+			"desc": "Merge text only with a verified common version. Conflicts that cannot be merged safely keep both copies. Priority strategies overwrite the other side after saving a recovery copy.",
 			"noConflictMerge": "Conflict-free merge",
-			"diff3": "Auto-merge (keeps both sides' edits, marked inline)",
+			"diff3": "Three-way merge (keeps conflicting copies)",
 			"localPriority": "Local priority (overwrite server)",
 			"serverPriority": "Server priority (overwrite local)"
 		},
 		"confirmBeforeSync": {
-			"name": "Confirm before sync",
-			"desc": "Show pending tasks and execute after confirmation"
+			"name": "Show sync policy confirmation",
+			"desc": "Choose a policy before scanning. Manual sync always shows a file plan and requires approval before writing."
 		},
 		"confirmBeforeDeleteInAutoSync": {
 			"name": "Confirm before deleting files during auto-sync",
-			"desc": "Show a confirmation dialog when local files are about to be deleted during auto-sync, allowing you to choose to delete or re-upload them"
+			"desc": "Leave any automatic sync that includes deletions for manual review. Conflicts and batches of 10 or more deletions always require manual review."
 		},
 		"realtimeSync": {
 			"name": "Real-time sync",
@@ -142,36 +98,6 @@
 			"defaultModel": {
 				"name": "Default model",
 				"desc": "Optional model selected for new chat sessions"
-			},
-			"nutstoreLlmGateway": {
-				"name": "Nutstore AI (Experimental)",
-				"providerName": "Nutstore",
-				"desc": "Authorize to use models provided by Nutstore.",
-				"pendingDesc": "Finish authorization in your browser. Current code: {{code}}",
-				"connectedDesc": "Authorized with {{count}} model(s) available.",
-				"authorize": "Authorize",
-				"authorizing": "Authorizing...",
-				"openAuthorizationPage": "Open authorization page",
-				"cancelAuthorization": "Cancel authorization",
-				"authorized": "Nutstore AI authorized",
-				"disconnect": "Disconnect",
-				"disconnected": "Nutstore AI disconnected",
-				"refreshModels": "Refresh",
-				"betaModal": {
-					"title": "Feature in Beta",
-					"message": "Nutstore AI is currently in beta and not yet available to all users. If you are not on the beta list, you may not be able to use the feature after authorizing. We are gradually opening access — please check back later.",
-					"cancel": "Cancel",
-					"confirm": "I understand, continue"
-				},
-				"errors": {
-					"authorizationRequired": "Authorize Nutstore AI first",
-					"authorizationExpired": "Nutstore AI authorization expired. Start again.",
-					"authorizationFailed": "Nutstore AI authorization failed: {{code}} {{message}}",
-					"missingClientId": "Missing LLM_GATEWAY_CLIENT_ID. Nutstore AI authorization cannot start.",
-					"modelsFailed": "Failed to fetch Nutstore AI models: {{status}}",
-					"emptyModels": "Nutstore AI did not return any available models",
-					"refreshFailed": "Failed to refresh Nutstore AI models"
-				}
 			},
 			"providers": {
 				"name": "Providers",
@@ -326,21 +252,11 @@
 				"duplicateModelId": "A model with this ID already exists",
 				"emptyProviderId": "Provider name cannot be empty",
 				"duplicateProviderId": "A provider with this name already exists",
-				"reservedProviderId": "This provider name is reserved by Nutstore AI. Use another name.",
 				"providerNotFoundForProtocolOpen": "Provider not found. It may have been deleted or renamed: {{providerId}}",
 				"networkDisconnected": "Network connection unavailable. Check your connection and try again.",
 				"browserCorsFallbackToBuiltinTransport": "Browser CORS request failed. Temporarily fell back to the built-in request transport.",
 				"browserCorsFailedWithDisableLink": "Browser CORS request failed. [Open this provider and disable CORS]({{link}})."
 			}
-		},
-		"logout": {
-			"confirmTitle": "Confirm logout",
-			"confirmMessage": "Are you sure you want to log out? You will need to log in again to continue syncing.",
-			"confirm": "Confirm logout",
-			"cancel": "Cancel"
-		},
-		"help": {
-			"name": "How to get WebDAV account and credential?"
 		},
 		"filters": {
 			"name": "Filter rules",
@@ -409,7 +325,7 @@
 		"cache": {
 			"title": "Cache management",
 			"clearName": "Clear local cache",
-			"clearDesc": "Delete local cache data stored on this device only. This action cannot be undone and will require rebuilding the cache before the next sync. Your Nutstore data remains intact.",
+			"clearDesc": "Delete local cache data stored on this device only. This action cannot be undone and will require rebuilding the cache before the next sync. Your S3 data remains intact.",
 			"clear": "Clear",
 			"confirm": "Confirm clear",
 			"cleared": "Cache cleared successfully",
@@ -425,10 +341,6 @@
 				"blobCache": {
 					"name": "File snapshot cache",
 					"desc": "Stores file snapshots needed for comparing changes during sync."
-				},
-				"traverseWebDAVCache": {
-					"name": "File scan cache",
-					"desc": "Stores remote folder structure to enable faster sync by fetching only changes. If you encounter file list anomalies or data inconsistencies after a plugin update, try clearing this cache. After clearing, the next sync will need to re-scan all remote files, which may take a while."
 				},
 				"nothingSelected": "Please select at least one cache type to clear."
 			},
@@ -515,12 +427,20 @@
 			"failedToAutoMerge": "Failed to auto merge",
 			"failedToUploadMerged": "Failed to upload merged content",
 			"requestsTooFrequent": "Requests too frequent, please wait a few minutes and try again",
-			"accountNotConfigured": "Nutstore account not configured. Please configure your account in settings first.",
-			"ssoTokenInvalid": "Login has expired. Please log in again in settings."
+			"accountNotConfigured": "Configure the S3 bucket, region and access keys first."
 		},
 		"requestsTooFrequent": "Requests too frequent, plugin will resume sync at {{time}}",
 		"preparing": "📋 Preparing sync",
 		"preparation": {
+			"scanningLocal": "Scanning local files…",
+			"checkingCapabilities": "Checking S3 write support…",
+			"capabilitiesDetail": "Checking whether this service supports safe writes. This may take several requests.",
+			"validating": "Rechecking files before sync…",
+			"validatingDetail": "Checking for changes since the plan was created.",
+			"recording": "Verifying unchanged files and saving sync history…",
+			"fileStats": "Processed {{completed}} of {{total}} files",
+			"analyzingDetail": "Comparing file contents. New or changed S3 objects may need to be read.",
+			"stageProgress": "Current stage",
 			"checkingRemote": "Checking the remote directory…",
 			"loadingState": "Reading sync state…",
 			"scanningRemote": "Scanning remote directories…",
@@ -538,7 +458,7 @@
 		"progress": "Sync progress: {{percent}}%",
 		"blockedBySync": "Sync is already running. Please try again later.",
 		"stoppingGcForSync": "Garbage collection is running. Stopping cleanup and starting sync.",
-		"startButton": "Start sync",
+		"startButton": "Start JASync",
 		"stopButton": "Stop sync",
 		"hideButton": "Hide",
 		"closeButton": "Close",
@@ -555,7 +475,7 @@
 		"updatingCache": "Updating local cache...",
 		"failedStatus": "Sync failed",
 		"cancelled": "Sync cancelled",
-		"suggestUseClientForManyTasks": "Tip: When there are many sync tasks, we recommend using the Nutstore client for better performance and stability. The plugin is more suitable for mobile use!",
+		"suggestUseClientForManyTasks": "This build previews changes without executing sync tasks.",
 		"fileOp": {
 			"createLocalDir": "Create local directory",
 			"createRemoteDir": "Create remote directory",
@@ -583,19 +503,19 @@
 		"confirmModal": {
 			"title": "Sync confirmation",
 			"policyTitle": "Sync policy for this sync",
-			"policyBasis": "Basis for the decision: current local and cloud states are compared with the last sync record.\nWithout a sync record, Loose mode treats same-path, same-type files with the same size as equal; Strict mode follows the selected policy.",
+			"policyBasis": "Decisions compare content hashes against the last successful common version. Equal file sizes are not treated as equal content. Without a common version, conflicting files are preserved separately.",
 			"policyRecordNote": "Preserved or skipped items are not marked as synchronized; the next sync will evaluate them again against the sync record.",
 			"message": "⚠️ Please note:\n\n1. Sync operation may modify or delete local files\n2. We recommend backing up important files before syncing\n3. In case of file conflicts, manual resolution may be required\n4. Initial sync will process all files and may take longer, please be patient\n\nAre you sure you want to start syncing?",
 			"confirm": "Confirm sync",
 			"cancel": "Cancel",
-			"remoteDir": "Remote directory: {{dir}}",
+			"remoteTarget": "S3 target: {{target}}",
 			"strategy": "Conflict strategy: {{strategy}}"
 		}
 	},
 	"taskList": {
 		"title": "Sync task list",
-		"instruction": "Please review the tasks below. Click \"Continue\" to execute the selected tasks, or \"Cancel\" to skip this sync.",
-		"continue": "Continue ({{count}})",
+		"instruction": "Review and select the operations below. Confirming executes only the selected files. Unchecked files remain unchanged.",
+		"continue": "Confirm and sync ({{count}})",
 		"cancel": "Cancel"
 	},
 	"deleteConfirm": {
@@ -841,5 +761,27 @@
 		"labels": {
 			"currentPath": "Current Path"
 		}
+	},
+	"s3": {
+		"previewTitle": "S3 sync plan (read-only preview)",
+		"previewNotice": "This build analyzes and previews changes only. Local files, S3 objects and sync records are not modified. Automatic sync is unavailable.",
+		"closePreview": "Close preview",
+		"credentialsNotice": "Connection settings and credentials are saved locally in data.local.json and excluded from sync. This file is not encrypted.",
+		"pathStyle": "Use path-style addressing",
+		"previewComplete": "Preview closed (no changes applied)",
+		"scanning": "Scanning S3 objects…",
+		"scanProgress": "Read {{pages}} pages, found {{items}} items",
+		"syncNotice": "Review the plan, select files, then confirm to execute. Overwritten and deleted content is saved under this plugin’s recovery folder. Automatic sync is opt-in. Conflicts, protected deletions and unsupported conditional writes require manual review.",
+		"keepBoth": "Keep both (local copy: {{path}})",
+		"protectPlugin": "Preserve JASync plugin files",
+		"manualReviewRequired": "JASync: changes need manual review. Run Start JASync to review and confirm them.",
+		"deleteTitle": "Confirm file deletions",
+		"deleteNotice": "You selected {{count}} file deletions. Recovery copies will be saved before removal. Only the selected files will be deleted; folders are never deleted recursively.",
+		"confirmDelete": "Confirm selected deletions",
+		"compatibilityTitle": "S3 compatibility mode",
+		"compatibilityNotice": "This storage service did not enforce all required conditional write/delete headers in the capability check. JASync will back up affected content locally and check remote versions again before each operation.\n\nA change made by another client between that check and the write/delete can still be overwritten. Pause other syncing clients before continuing. Recovery files are kept in this plugin’s recovery folder.\n\nAllow this mode for this sync only?",
+		"compatibilityConfirm": "Continue with backups and version checks",
+		"targetChanged": "S3 settings changed after the preview. Run JASync again.",
+		"skippedNotice": "JASync finished the selected operations; {{count}} unchecked or skipped items remain."
 	}
 }

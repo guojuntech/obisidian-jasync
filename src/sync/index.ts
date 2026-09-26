@@ -1,8 +1,8 @@
-import { chunk } from 'lodash-es'
+import { chunk, cloneDeep } from 'lodash-es'
 import { Notice, Platform, Vault, moment, normalizePath } from 'obsidian'
 import { dirname } from 'path-browserify'
 import { Subscription } from 'rxjs'
-import { WebDAVClient } from 'webdav'
+import type { RemoteSession } from '~/remote-storage/remote-session'
 import DeleteConfirmModal from '~/components/DeleteConfirmModal'
 import FailedTasksModal, { FailedTaskInfo } from '~/components/FailedTasksModal'
 import TaskListConfirmModal from '~/components/TaskListConfirmModal'
@@ -20,10 +20,9 @@ import {
 } from '~/events'
 import IFileSystem from '~/fs/fs.interface'
 import { LocalVaultFileSystem } from '~/fs/local-vault'
-import { NutstoreFileSystem } from '~/fs/nutstore'
+import { RemoteStorageFileSystem } from '~/fs/remote-storage'
 import i18n from '~/i18n'
-import CacheService from '~/services/cache.service.v1'
-import { SyncPolicy } from '~/settings'
+import { SyncPolicy, type JASyncSettings } from '~/settings'
 import { syncRecordKV } from '~/storage'
 import { SyncRecord } from '~/storage/sync-record'
 import {
@@ -33,16 +32,11 @@ import {
 } from '~/sync/log'
 import breakableSleep from '~/utils/breakable-sleep'
 import { computeEffectiveFilterRules } from '~/utils/config-dir-rules'
-import { getDBKey } from '~/utils/get-db-key'
 import getTaskName from '~/utils/get-task-name'
 import { is503Error } from '~/utils/is-503-error'
-import {
-	getNutstoreDavEndpoint,
-	getNutstoreNsdavEndpoint,
-} from '~/utils/nutstore-endpoints'
 import { statVaultItem } from '~/utils/stat-vault-item'
 import { stdRemotePath } from '~/utils/std-remote-path'
-import NutstorePlugin from '..'
+import JASyncPlugin from '..'
 import ReceiveOnlySyncDecider, {
 	ReceiveOnlyRevertLocalChangesSyncDecider,
 } from './decision/receive-only.decider'
@@ -89,7 +83,8 @@ export interface SyncStartResult {
 	shouldReloadSettings: boolean
 }
 
-export class NutstoreSync {
+export class JASyncCoordinator {
+	private readonly settingsSnapshot: JASyncSettings
 	remoteFs: IFileSystem
 	localFS: IFileSystem
 	isCancelled: boolean = false
@@ -112,20 +107,19 @@ export class NutstoreSync {
 	private currentLogger: SyncLogger = createSyncLogger(this.currentLogPrefix)
 
 	constructor(
-		private plugin: NutstorePlugin,
+		private plugin: JASyncPlugin,
 		private options: {
 			vault: Vault
-			token: string
-			remoteAccountId: string
-			remoteBaseDir: string
-			webdav: WebDAVClient
+			session: RemoteSession
+			recordKey: string
 		},
 	) {
 		this.options = Object.freeze(this.options)
-		const filterRules = computeEffectiveFilterRules(plugin)
-		this.remoteFs = new NutstoreFileSystem({
-			...this.options,
-			settings: plugin.settings,
+		this.settingsSnapshot = cloneDeep(plugin.settings)
+		const filterRules = cloneDeep(computeEffectiveFilterRules(plugin))
+		this.remoteFs = new RemoteStorageFileSystem({
+			scanner: this.options.session.scanner,
+			remoteBaseDir: this.remoteBaseDir,
 			filterRules,
 			onTraversalProgress: (traversal) => {
 				this.emitPreparationProgress({
@@ -138,12 +132,9 @@ export class NutstoreSync {
 		})
 		this.localFS = new LocalVaultFileSystem({
 			vault: this.options.vault,
-			syncRecord: new SyncRecord(
-				getDBKey(this.vault.getName(), this.remoteBaseDir),
-				syncRecordKV,
-			),
+			syncRecord: new SyncRecord(this.options.recordKey, syncRecordKV),
 			filterRules,
-			settings: plugin.settings,
+			settings: this.settingsSnapshot,
 		})
 		this.subscriptions.push(
 			onCancelSync().subscribe(() => {
@@ -165,6 +156,12 @@ export class NutstoreSync {
 		})
 		this.currentLogger = createSyncLogger(this.currentLogPrefix)
 		try {
+			if (
+				this.options.session.mode === 'preview' &&
+				mode === SyncStartMode.AUTO_SYNC
+			) {
+				return { ended: false, ranTasks: false, shouldReloadSettings: false }
+			}
 			const showNotice = mode === SyncStartMode.MANUAL_SYNC
 			this.preparationProgressEnabled = showNotice
 			let preparingEmitted = false
@@ -180,61 +177,63 @@ export class NutstoreSync {
 			}
 
 			const settings = this.settings
-			const webdav = this.webdav
-			const remoteBaseDir = stdRemotePath(this.options.remoteBaseDir)
-			this.logger.info('[Sync] Endpoint:', {
-				loginMode: settings.loginMode,
-				dav: getNutstoreDavEndpoint(settings),
-				nsdav: getNutstoreNsdavEndpoint(settings),
+			const remoteStorage = this.remoteStorage
+			const remoteBaseDir = stdRemotePath(this.options.session.remoteBaseDir)
+			this.logger.info('[Sync] Backend:', {
+				type: this.remoteStorage.type,
+				identity: this.options.session.identity,
 				remoteBaseDir,
 			})
-			const syncRecord = new SyncRecord(
-				getDBKey(this.vault.getName(), this.remoteBaseDir),
-				syncRecordKV,
-			)
-			const cacheService = new CacheService(this.plugin)
+			const syncRecord = new SyncRecord(this.options.recordKey, syncRecordKV)
+			const cacheService = this.options.session.cache
 
-			this.emitPreparationProgress({ phase: 'checkingRemote' })
-			let remoteBaseDirExits = await webdav.exists(remoteBaseDir)
+			if (this.options.session.mode !== 'preview') {
+				this.emitPreparationProgress({ phase: 'checkingRemote' })
+				let remoteBaseDirExits = await remoteStorage.exists(remoteBaseDir)
 
-			if (!remoteBaseDirExits) {
-				await syncRecord.drop()
-			}
-
-			while (!remoteBaseDirExits) {
-				if (this.isCancelled) {
-					emitSyncCancelled()
-					return {
-						ended: false,
-						ranTasks: false,
-						shouldReloadSettings: false,
-					}
+				if (!remoteBaseDirExits) {
+					await syncRecord.drop()
 				}
-				try {
-					await webdav.createDirectory(this.options.remoteBaseDir, {
-						recursive: true,
-					})
-					break
-				} catch (e) {
-					if (is503Error(e as Error)) {
-						await this.handle503Error(60000)
-						if (this.isCancelled) {
-							emitSyncCancelled()
-							return {
-								ended: false,
-								ranTasks: false,
-								shouldReloadSettings: false,
-							}
+
+				while (!remoteBaseDirExits) {
+					if (this.isCancelled) {
+						emitSyncCancelled()
+						return {
+							ended: false,
+							ranTasks: false,
+							shouldReloadSettings: false,
 						}
-						remoteBaseDirExits = await webdav.exists(remoteBaseDir)
-					} else {
-						throw e
+					}
+					try {
+						await remoteStorage.createDirectory(
+							this.options.session.remoteBaseDir,
+							{
+								recursive: true,
+							},
+						)
+						break
+					} catch (e) {
+						if (is503Error(e as Error)) {
+							await this.handle503Error(60000)
+							if (this.isCancelled) {
+								emitSyncCancelled()
+								return {
+									ended: false,
+									ranTasks: false,
+									shouldReloadSettings: false,
+								}
+							}
+							remoteBaseDirExits = await remoteStorage.exists(remoteBaseDir)
+						} else {
+							throw e
+						}
 					}
 				}
 			}
 
 			this.emitPreparationProgress({ phase: 'loadingState' })
-			await cacheService.restoreRemoteTraversalCacheIfMissing(this.logger)
+			if (this.options.session.mode !== 'preview')
+				await cacheService?.restore(this.logger)
 			const decider = (() => {
 				switch (syncPolicy) {
 					case SyncPolicy.SendOnly:
@@ -255,12 +254,17 @@ export class NutstoreSync {
 			})()
 			this.emitPreparationProgress({ phase: 'analyzing' })
 			const tasks = await decider.decide()
+			this.throwIfCancelled()
+			if (this.options.session.mode === 'preview') {
+				this.plugin.progressService.closeProgressModal()
+				await new TaskListConfirmModal(this.app, tasks, true).openAndWait()
+				this.throwIfCancelled()
+				emitEndSync({ showNotice, failedCount: 0, previewOnly: true })
+				return { ended: true, ranTasks: false, shouldReloadSettings: false }
+			}
 			if (!this.isCancelled) {
 				this.emitPreparationProgress({ phase: 'savingCache' })
-				await cacheService.saveRemoteTraversalCache(
-					this.logger,
-					() => this.isCancelled,
-				)
+				await cacheService?.save(this.logger, () => this.isCancelled)
 			}
 			this.throwIfCancelled()
 
@@ -432,18 +436,16 @@ export class NutstoreSync {
 							return
 						}
 
-						// Check if parent directory exists remotely using webdav.stat
-						try {
-							await webdav.stat(parentRemotePath)
+						// Only a genuine absence may create a directory task.
+						if (await remoteStorage.exists(parentRemotePath)) {
 							// Directory exists, mark it and all parents as existing
 							markPathAndParentsAsExisting(parentRemotePath)
-						} catch (e) {
-							this.logger.error(e)
+						} else {
 							// Directory doesn't exist, create mkdir task
 							// No need to check parent's parent since createDirectory uses recursive: true
 							const mkdirTask = new MkdirRemoteTask({
 								vault: this.vault,
-								webdav: webdav,
+								remoteStorage: remoteStorage,
 								remoteBaseDir: this.remoteBaseDir,
 								remotePath: parentRemotePath,
 								localPath: parentLocalPath,
@@ -797,9 +799,9 @@ export class NutstoreSync {
 		progress: UpdateMtimeProgress,
 	) {
 		return updateMtimeInRecordUtil(
-			this.plugin,
+			this.remoteFs,
 			this.vault,
-			this.remoteBaseDir,
+			this.options.recordKey,
 			tasks,
 			results,
 			10,
@@ -823,8 +825,8 @@ export class NutstoreSync {
 		return this.plugin.app
 	}
 
-	get webdav() {
-		return this.options.webdav
+	get remoteStorage() {
+		return this.options.session.storage
 	}
 
 	get vault() {
@@ -832,11 +834,11 @@ export class NutstoreSync {
 	}
 
 	get remoteBaseDir() {
-		return this.options.remoteBaseDir
+		return this.options.session.remoteBaseDir
 	}
 
 	get settings() {
-		return this.plugin.settings
+		return this.settingsSnapshot
 	}
 
 	get localSettings() {

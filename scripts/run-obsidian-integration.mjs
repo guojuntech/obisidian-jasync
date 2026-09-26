@@ -13,15 +13,16 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import esbuild from 'esbuild'
 import { rawTextPlugin } from './esbuild/plugins/raw-text.mjs'
+import { runNativeObsidian } from './run-obsidian-native.mjs'
 import {
 	createObsidianSandbox,
 	startObsidian,
 } from './obsidian-integration-environment.mjs'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const PLUGIN_ID = 'nutstore-sync'
-const HARNESS_ID = 'nutstore-sync-integration-harness'
-const RESULT_PATH = '.obsidian/nutstore-sync-e2e-result.json'
+const PLUGIN_ID = 'omni-sync'
+const HARNESS_ID = 'omni-sync-integration-harness'
+const RESULT_PATH = '.obsidian/omni-sync-e2e-result.json'
 const STARTUP_TIMEOUT_MS = Number.parseInt(
 	process.env.OBSIDIAN_E2E_STARTUP_TIMEOUT_MS ?? '60000',
 	10,
@@ -149,7 +150,7 @@ async function buildHarness(outfile) {
 		format: 'cjs',
 		platform: 'browser',
 		target: 'es2018',
-		external: ['obsidian'],
+		external: ['obsidian', 'node:crypto'],
 		alias: {
 			'~': join(ROOT, 'src'),
 			'node:zlib': join(ROOT, 'src/shims/node-zlib.ts'),
@@ -187,7 +188,7 @@ async function prepareVault(root) {
 		join(harnessDir, 'manifest.json'),
 		JSON.stringify({
 			id: HARNESS_ID,
-			name: 'Nutstore Sync Integration Harness',
+			name: 'JASync Integration Harness',
 			version: '0.0.0',
 			minAppVersion: '1.7.2',
 			description: 'Private integration test harness.',
@@ -268,10 +269,7 @@ async function retainGuestArtifacts(sandbox, artifactRoot) {
 			'/root/nutstore-vault/.obsidian/workspace-mobile.json',
 			'workspace-mobile.json',
 		],
-		[
-			'/root/nutstore-vault/.obsidian/nutstore-sync-e2e-result.json',
-			'result.json',
-		],
+		['/root/nutstore-vault/.obsidian/omni-sync-e2e-result.json', 'result.json'],
 		['/root/obsidian-profile/obsidian.json', 'obsidian.json'],
 		['/root/obsidian-profile/e2e0000000000001.json', 'vault-profile.json'],
 	]) {
@@ -295,6 +293,15 @@ async function main() {
 	}
 	const artifactRoot = await mkdtemp(join(tmpdir(), 'nutstore-obsidian-e2e-'))
 	const vault = await prepareVault(artifactRoot)
+	if (process.argv.includes('--native')) {
+		await runNativeObsidian({
+			artifactRoot,
+			vault,
+			resultPath: RESULT_PATH,
+			timeout: STARTUP_TIMEOUT_MS,
+		})
+		return
+	}
 	let sandbox
 	let obsidian
 	let passed = false

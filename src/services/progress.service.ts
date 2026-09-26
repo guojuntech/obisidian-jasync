@@ -13,7 +13,7 @@ import {
 	UpdateSyncProgress,
 } from '../events'
 import i18n from '../i18n'
-import NutstorePlugin from '../index'
+import JASyncPlugin from '../index'
 import { BaseService } from './service.interface'
 
 export class ProgressService extends BaseService {
@@ -32,7 +32,7 @@ export class ProgressService extends BaseService {
 
 	private subscriptions: { unsubscribe: () => void }[] = []
 
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 	}
 
@@ -48,11 +48,15 @@ export class ProgressService extends BaseService {
 				this.updateModal()
 			}),
 			onSyncPreparationProgress().subscribe((progress) => {
+				const phaseChanged = this.preparationProgress?.phase !== progress.phase
 				this.preparationProgress = progress
 				this.updateModal()
+				if (phaseChanged) this.updateModal.flush()
 			}),
 			onStartSync().subscribe(() => {
 				this.preparationProgress = null
+				this.updateModal()
+				this.updateModal.flush()
 			}),
 			onEndSync().subscribe(({ failedCount }) => {
 				this.syncEnd = true
@@ -118,6 +122,7 @@ export class ProgressService extends BaseService {
 	}
 
 	override onunload() {
+		this.updateModal.cancel()
 		this.subscriptions.forEach((sub) => sub.unsubscribe())
 		this.subscriptions = []
 		this.closeProgressModal()

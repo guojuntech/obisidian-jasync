@@ -1,6 +1,6 @@
 import { normalizePath, Platform, Vault } from 'obsidian'
 import { dirname } from 'path-browserify'
-import type { BufferLike, WebDAVClient } from 'webdav'
+import type RemoteStorage from '~/remote-storage/remote-storage.interface'
 import { parseMobileAppDownloadFileChunkSize } from './download-chunk-size'
 import { writeLocalBinary } from './local-vault-io'
 import logger from './logger'
@@ -8,7 +8,7 @@ import { mkdirsVault } from './mkdirs-vault'
 
 export interface DownloadRemoteFileOptions {
 	vault: Vault
-	webdav: WebDAVClient
+	remoteStorage: RemoteStorage
 	remotePath: string
 	localPath: string
 	remoteSize: number
@@ -21,13 +21,6 @@ export async function downloadRemoteFile(options: DownloadRemoteFileOptions) {
 		return
 	}
 	await downloadRemoteFileInChunks(options)
-}
-
-export function bufferLikeToArrayBuffer(buffer: BufferLike): ArrayBuffer {
-	if (buffer instanceof ArrayBuffer) {
-		return buffer
-	}
-	return toArrayBuffer(buffer)
 }
 
 function concatenateChunks(chunks: ArrayBuffer[], totalSize: number) {
@@ -49,16 +42,12 @@ function concatenateChunks(chunks: ArrayBuffer[], totalSize: number) {
 
 async function downloadRemoteFileWhole({
 	vault,
-	webdav,
+	remoteStorage,
 	remotePath,
 	localPath,
 	remoteSize,
 }: DownloadRemoteFileOptions) {
-	const file = (await webdav.getFileContents(remotePath, {
-		format: 'binary',
-		details: false,
-	})) as BufferLike
-	const arrayBuffer = bufferLikeToArrayBuffer(file)
+	const { data: arrayBuffer } = await remoteStorage.getFileContents(remotePath)
 	if (arrayBuffer.byteLength !== remoteSize) {
 		throw new Error('Remote Size Not Match!')
 	}
@@ -68,7 +57,7 @@ async function downloadRemoteFileWhole({
 
 async function downloadRemoteFileInChunks({
 	vault,
-	webdav,
+	remoteStorage,
 	remotePath,
 	localPath,
 	remoteSize,
@@ -93,7 +82,7 @@ async function downloadRemoteFileInChunks({
 		mobileAppDownloadFileChunkSize,
 	)
 	const tempPath = normalizePath(
-		`${normalizedLocalPath}.nutstore-sync-${Date.now()}-${Math.random()
+		`${normalizedLocalPath}.omni-sync-${Date.now()}-${Math.random()
 			.toString(36)
 			.slice(2)}.download`,
 	)
@@ -107,16 +96,17 @@ async function downloadRemoteFileInChunks({
 	try {
 		while (offset < remoteSize) {
 			const end = Math.min(offset + chunkSize, remoteSize) - 1
-			const response = await webdav.customRequest(remotePath, {
-				method: 'GET',
-				headers: {
-					Range: `bytes=${offset}-${end}`,
-				},
+			const response = await remoteStorage.getFileContents(remotePath, {
+				range: { start: offset, end },
 			})
-			if (response.status !== 206) {
-				throw new Error(`Range download failed with status ${response.status}`)
+			if (
+				response.range?.start !== offset ||
+				response.range.end !== end ||
+				response.range.total !== remoteSize
+			) {
+				throw new Error('Remote range does not match the requested file')
 			}
-			const chunk = await response.arrayBuffer()
+			const chunk = response.data
 			const expectedLength = end - offset + 1
 			if (chunk.byteLength !== expectedLength) {
 				throw new Error('Remote chunk size not match!')
@@ -172,13 +162,4 @@ async function removeTempDownload(vault: Vault, tempPath: string) {
 	} catch {
 		// Best-effort cleanup only; preserve the original download error.
 	}
-}
-
-function toArrayBuffer(buf: Buffer): ArrayBuffer {
-	if (buf.buffer instanceof SharedArrayBuffer) {
-		const copy = new ArrayBuffer(buf.byteLength)
-		new Uint8Array(copy).set(buf)
-		return copy
-	}
-	return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
 }

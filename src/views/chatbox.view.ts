@@ -10,7 +10,7 @@ import {
 	WorkspaceLeaf,
 } from 'obsidian'
 import type { EditorView } from '@codemirror/view'
-import { CHATBOX_AI_ICON_ID } from '~/assets/icons/obsidian-nutstore-ai-icon'
+import { CHATBOX_AI_ICON_ID } from '~/assets/icons/chatbox-ai-icon'
 import { resolveResourceDataUrl } from '~/ai/tools/resource-data-url'
 import {
 	createImageContextItem,
@@ -24,7 +24,7 @@ import {
 import type { ChatboxController, ChatboxProps } from '~/ai/chat/ui/types'
 import i18n from '~/i18n'
 import logger from '~/utils/logger'
-import type NutstorePlugin from '..'
+import type JASyncPlugin from '..'
 import {
 	hideChatboxSelectionHighlight,
 	showChatboxSelectionHighlight,
@@ -36,7 +36,7 @@ import {
 } from './markdown-link-handler'
 import { mountChatbox } from '../components/solid-js'
 
-export const CHATBOX_VIEW_TYPE = 'nutstore-sync-chatbox'
+export const CHATBOX_VIEW_TYPE = 'omni-sync-chatbox'
 
 function normalizeDroppedVaultPath(path: string): string | null {
 	let value = path.trim()
@@ -160,7 +160,7 @@ export default class ChatboxView extends ItemView {
 
 	constructor(
 		leaf: WorkspaceLeaf,
-		private plugin: NutstorePlugin,
+		private plugin: JASyncPlugin,
 	) {
 		super(leaf)
 		this.registerEvent(
@@ -499,7 +499,7 @@ export default class ChatboxView extends ItemView {
 	async onOpen() {
 		this.contentEl.empty()
 		this.rootEl = this.contentEl.createDiv({
-			cls: ':uno: nutstore-chatbox-view h-full',
+			cls: ':uno: jasync-chatbox-view h-full',
 		})
 		this.captureActiveContextSnapshot(true)
 		this.plugin.chatService.setChatModalHost(this.rootEl)

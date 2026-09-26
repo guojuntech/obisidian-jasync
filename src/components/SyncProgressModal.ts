@@ -9,7 +9,7 @@ import { BaseTask } from '~/sync/tasks/task.interface'
 import { addClassTokens, removeClassTokens } from '~/utils/class-tokens'
 import getTaskName from '~/utils/get-task-name'
 import { getSyncPreparationText } from '~/utils/sync-preparation-text'
-import NutstorePlugin from '..'
+import JASyncPlugin from '..'
 import {
 	emitCancelSync,
 	onCancelSync,
@@ -55,7 +55,7 @@ export default class SyncProgressModal extends Modal {
 	private cacheProgressSection!: HTMLDivElement
 
 	constructor(
-		private plugin: NutstorePlugin,
+		private plugin: JASyncPlugin,
 		private closeCallback?: () => void,
 	) {
 		super(plugin.app)
@@ -107,10 +107,16 @@ export default class SyncProgressModal extends Modal {
 
 		this.updateHeader(state, preparationText?.operation, failedCount)
 		this.updateControls(state)
+		this.modalEl.toggleClass(
+			'omni-sync-progress-modal--preparing',
+			state === 'preparing',
+		)
 		const hasStatusDetails =
 			state === 'preparing'
 				? Boolean(
-						preparation?.traversal?.currentPath || preparationText?.detail,
+						preparation?.files?.currentPath ||
+						preparation?.traversal?.currentPath ||
+						preparationText?.detail,
 					)
 				: state === 'syncing' && progress.current !== null
 		if (hasStatusDetails) {
@@ -120,24 +126,39 @@ export default class SyncProgressModal extends Modal {
 		}
 
 		if (state === 'preparing' && preparation && preparationText) {
-			this.currentFile.setText(preparation.traversal?.currentPath ?? '')
+			this.currentFile.setText(
+				preparation.files?.currentPath ??
+					preparation.traversal?.currentPath ??
+					'',
+			)
 			if (preparationText.detail) {
 				this.statusMessage.setText(preparationText.detail)
 				this.statusMessage.show()
 			} else {
 				this.statusMessage.hide()
 			}
-			this.progressBar.setCssProps({ width: '' })
 			this.resetCacheProgress()
-			this.progressBar.addClass('nutstore-sync-progress-indeterminate')
-			addClassTokens(this.progressBar, ':uno: w-[40%]')
-			this.progressText.setText('')
+			this.progressLabel.setText(i18n.t('sync.preparation.stageProgress'))
+			const files = preparation.files
+			const determinate = Boolean(files && files.total > 0)
+			const percent = determinate
+				? Math.min(100, Math.round((files!.completed / files!.total) * 100))
+				: 0
+			this.progressBar.toggleClass(
+				'omni-sync-progress-indeterminate',
+				!determinate,
+			)
+			this.progressBar.setCssProps({
+				width: determinate ? `${percent}%` : '40%',
+			})
+			this.progressText.setText(
+				determinate ? i18n.t('sync.percentComplete', { percent }) : '',
+			)
 			this.filesSection.hide()
 			return
 		}
 
-		this.progressBar.removeClass('nutstore-sync-progress-indeterminate')
-		removeClassTokens(this.progressBar, ':uno: w-[40%]')
+		this.progressBar.removeClass('omni-sync-progress-indeterminate')
 		if (state === 'complete' && progress.total === 0) {
 			this.filesSection.hide()
 		} else {
@@ -191,18 +212,15 @@ export default class SyncProgressModal extends Modal {
 		failedCount = 0,
 	): void {
 		const stateClasses = [
-			'nutstore-sync-progress__status-icon--preparing',
-			'nutstore-sync-progress__status-icon--syncing',
-			'nutstore-sync-progress__status-icon--complete',
-			'nutstore-sync-progress__status-icon--warning',
-			'nutstore-sync-progress__status-icon--error',
-			'nutstore-sync-progress__status-icon--cancelled',
+			'omni-sync-progress__status-icon--preparing',
+			'omni-sync-progress__status-icon--syncing',
+			'omni-sync-progress__status-icon--complete',
+			'omni-sync-progress__status-icon--warning',
+			'omni-sync-progress__status-icon--error',
+			'omni-sync-progress__status-icon--cancelled',
 		]
 		removeClassTokens(this.statusIcon, ...stateClasses)
-		addClassTokens(
-			this.statusIcon,
-			`nutstore-sync-progress__status-icon--${state}`,
-		)
+		addClassTokens(this.statusIcon, `omni-sync-progress__status-icon--${state}`)
 
 		const icon =
 			state === 'preparing'
@@ -219,7 +237,7 @@ export default class SyncProgressModal extends Modal {
 		this.statusIcon.empty()
 		setIcon(this.statusIcon, icon)
 		this.statusIcon.classList.toggle(
-			'nutstore-sync-spinning',
+			'omni-sync-spinning',
 			state === 'preparing' || state === 'syncing',
 		)
 
@@ -313,69 +331,69 @@ export default class SyncProgressModal extends Modal {
 	onOpen() {
 		const { contentEl } = this
 		contentEl.empty()
-		this.modalEl.addClass('nutstore-sync-progress-modal')
-		contentEl.addClass('nutstore-sync-progress-modal__content')
+		this.modalEl.addClass('omni-sync-progress-modal')
+		contentEl.addClass('omni-sync-progress-modal__content')
 
 		const container = contentEl.createDiv({
-			cls: 'nutstore-sync-progress',
+			cls: 'omni-sync-progress',
 		})
 
 		const title = this.titleEl
 		title.empty()
-		title.addClass('nutstore-sync-progress__native-title')
+		title.addClass('omni-sync-progress__native-title')
 
 		const heading = title.createDiv({
-			cls: 'nutstore-sync-progress__heading',
+			cls: 'omni-sync-progress__heading',
 		})
 		const statusIcon = heading.createDiv({
-			cls: 'nutstore-sync-progress__status-icon--preparing',
+			cls: 'omni-sync-progress__status-icon--preparing',
 		})
 		setIcon(statusIcon, 'loader-circle')
 		const titleText = title.createSpan({
-			cls: 'nutstore-sync-progress__title-text',
+			cls: 'omni-sync-progress__title-text',
 		})
 		titleText.setText(i18n.t('sync.progressTitle'))
 
 		const statusSection = container.createDiv({
-			cls: 'nutstore-sync-progress__status',
+			cls: 'omni-sync-progress__status',
 		})
 
 		const currentFile = statusSection.createDiv({
-			cls: 'nutstore-sync-progress__current-file',
+			cls: 'omni-sync-progress__current-file',
 		})
 
 		const statusMessage = statusSection.createDiv({
-			cls: 'nutstore-sync-progress__summary',
+			cls: 'omni-sync-progress__summary',
 		})
 		statusMessage.hide()
 
 		const progressCard = container.createDiv({
-			cls: 'nutstore-sync-progress__card',
+			cls: 'omni-sync-progress__card',
 		})
 		const progressSection = progressCard.createDiv({
-			cls: 'nutstore-sync-progress__primary',
+			cls: 'omni-sync-progress__primary',
 		})
 
 		const progressLabel = progressSection.createDiv({
-			cls: 'nutstore-sync-progress__label',
+			cls: 'omni-sync-progress__label',
 		})
 		progressLabel.setText(i18n.t('sync.progressLabel'))
 
 		const progressBarContainer = progressSection.createDiv({
-			cls: 'nutstore-sync-progress__bar-container',
+			cls: 'omni-sync-progress__bar-container',
 		})
 
 		const progressBar = progressBarContainer.createDiv({
-			cls: 'nutstore-sync-progress__bar',
+			cls: 'omni-sync-progress__bar',
 		})
 
 		const progressText = progressBarContainer.createDiv({
-			cls: 'nutstore-sync-progress__bar-label',
+			cls: 'omni-sync-progress__bar-label',
 		})
 
 		// Cache progress section
 		const cacheProgressSection = progressCard.createDiv({
-			cls: 'nutstore-sync-progress__cache',
+			cls: 'omni-sync-progress__cache',
 		})
 		this.cacheProgressSection = cacheProgressSection
 		this.cacheProgressSection.hide()
@@ -384,28 +402,28 @@ export default class SyncProgressModal extends Modal {
 		this.cacheCurrentOperation.hide()
 
 		const cacheProgressLabel = cacheProgressSection.createDiv({
-			cls: 'nutstore-sync-progress__label',
+			cls: 'omni-sync-progress__label',
 		})
 		cacheProgressLabel.setText(i18n.t('sync.cacheProgressLabel'))
 
 		const cacheProgressBarContainer = cacheProgressSection.createDiv({
-			cls: 'nutstore-sync-progress__bar-container',
+			cls: 'omni-sync-progress__bar-container',
 		})
 		cacheProgressBarContainer.hide()
 
 		this.cacheProgressBar = cacheProgressBarContainer.createDiv({
-			cls: 'nutstore-sync-progress__bar',
+			cls: 'omni-sync-progress__bar',
 		})
 		this.cacheProgressText = cacheProgressBarContainer.createDiv({
-			cls: 'nutstore-sync-progress__bar-label',
+			cls: 'omni-sync-progress__bar-label',
 		})
 
 		const filesSection = container.createDiv({
-			cls: 'nutstore-sync-progress__files',
+			cls: 'omni-sync-progress__files',
 		})
 
 		const filesList = filesSection.createDiv({
-			cls: 'nutstore-sync-progress__files-list',
+			cls: 'omni-sync-progress__files-list',
 		})
 
 		this.progressTitle = titleText
@@ -420,7 +438,7 @@ export default class SyncProgressModal extends Modal {
 		this.filesSection = filesSection
 
 		const footerButtons = container.createDiv({
-			cls: 'nutstore-sync-progress__footer',
+			cls: 'omni-sync-progress__footer',
 		})
 
 		const stopButton = new ButtonComponent(footerButtons)
@@ -441,10 +459,10 @@ export default class SyncProgressModal extends Modal {
 		this.updateMtimeSubscription.unsubscribe()
 		const { contentEl } = this
 		contentEl.empty()
-		contentEl.removeClass('nutstore-sync-progress-modal__content')
+		contentEl.removeClass('omni-sync-progress-modal__content')
 		this.titleEl.empty()
-		this.titleEl.removeClass('nutstore-sync-progress__native-title')
-		this.modalEl.removeClass('nutstore-sync-progress-modal')
+		this.titleEl.removeClass('omni-sync-progress__native-title')
+		this.modalEl.removeClass('omni-sync-progress-modal')
 		if (this.closeCallback) {
 			this.closeCallback()
 		}

@@ -11,7 +11,6 @@ jobs:
     environment: production
     permissions:
       contents: write
-      packages: read
     steps:
       - uses: actions/checkout@v3
         with:
@@ -21,8 +20,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '22.x'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@nutstore'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -30,8 +27,6 @@ jobs:
           version: latest-9
 
       - name: Install dependencies
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install
 
       - name: Update models API catalog
@@ -40,12 +35,7 @@ jobs:
 
       - name: Build plugin
         env:
-          NS_NSDAV_ENDPOINT: ${{ vars.NS_NSDAV_ENDPOINT }}
-          NS_DAV_ENDPOINT: ${{ vars.NS_DAV_ENDPOINT }}
-          LLM_GATEWAY_CLIENT_ID: ${{ vars.LLM_GATEWAY_CLIENT_ID }}
-          NUTSTORE_PAT: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm run build
 
       - name: Package plugin

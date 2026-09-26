@@ -1,16 +1,9 @@
-import type NutstorePlugin from '~/index'
+import type JASyncPlugin from '~/index'
 import GlobMatch, {
-	compileFilterRules,
 	type GlobFilterRule,
 	type GlobMatchOptions,
-	isPathIncluded,
 	isVoidGlobMatchOptions,
 } from './glob-match'
-import {
-	REMOTE_SYNC_CACHE_DIR,
-	REMOTE_SYNC_CACHE_FILENAME,
-	getSyncCacheLocalPath,
-} from './sync-cache-file'
 
 export type ConfigDirSyncMode = 'none' | 'bookmarks' | 'all'
 
@@ -28,8 +21,10 @@ const CONFIG_DIR_SYSTEM_EXCLUSION_SUFFIXES = [
 	'plugins/**/node_modules',
 	'plugins/**/.git',
 	'plugins/**/.pnpm-store',
-	'plugins/nutstore-sync/data.local.json',
-	`${REMOTE_SYNC_CACHE_DIR}/${REMOTE_SYNC_CACHE_FILENAME}`,
+	'plugins/omni-sync/data.local.json',
+	'plugins/omni-sync/data.json',
+	'plugins/omni-sync/cache',
+	'plugins/omni-sync/recovery',
 	'workspace',
 	'workspace.json',
 ] as const
@@ -52,33 +47,15 @@ export function getConfigDirSystemTraversalRules(
 export function getConfigDirSystemFilterRules(
 	configDir: string,
 ): GlobFilterRule[] {
-	return CONFIG_DIR_SYSTEM_EXCLUSION_SUFFIXES.flatMap((suffix) => [
-		makeCaseSensitiveRule(`${configDir}/${suffix}`),
-		makeCaseSensitiveRule(`${configDir}/${suffix}/**`),
-	])
-}
-
-/**
- * The remote traversal cache is implementation state, but its current remote
- * location is inside the vault config directory. Respect the config-directory
- * sync mode and the user's own filter rules before accessing it.
- *
- * System filter rules are intentionally not considered here: they prevent the
- * cache file from being synchronized as user content, while this check decides
- * whether the cache service may access its dedicated remote storage.
- */
-export function shouldUseRemoteTraversalCache(
-	configDir: string,
-	mode: ConfigDirSyncMode,
-	filterRules: ConfigDirFilterRuleInput,
-): boolean {
-	if (mode !== 'all') {
-		return false
-	}
-	return isPathIncluded(
-		getSyncCacheLocalPath(configDir),
-		compileFilterRules(filterRules.rules),
-	)
+	return [
+		makeCaseSensitiveRule('/.omni-sync-internal'),
+		makeCaseSensitiveRule('/.omni-sync-internal/**'),
+		makeCaseSensitiveRule('**/*.omni-sync-*.download'),
+		...CONFIG_DIR_SYSTEM_EXCLUSION_SUFFIXES.flatMap((suffix) => [
+			makeCaseSensitiveRule(`${configDir}/${suffix}`),
+			makeCaseSensitiveRule(`${configDir}/${suffix}/**`),
+		]),
+	]
 }
 
 /**
@@ -153,7 +130,7 @@ export function computeEffectiveFilterRulesFromParts(
 
 /**
  * Returns true if `path` points to a file or folder inside this plugin's own
- * directory `<configDir>/plugins/nutstore-sync/` (or that directory itself).
+ * directory `<configDir>/plugins/omni-sync/` (or that directory itself).
  *
  * The plugin must never delete its own files during sync — when the remote
  * vault simply does not have the plugin installed, the local plugin files
@@ -161,7 +138,7 @@ export function computeEffectiveFilterRulesFromParts(
  * self-deletion.
  */
 export function isPluginSelfPath(path: string, configDir: string): boolean {
-	const pluginDir = `${configDir}/plugins/nutstore-sync`
+	const pluginDir = `${configDir}/plugins/omni-sync`
 	return path === pluginDir || path.startsWith(`${pluginDir}/`)
 }
 
@@ -174,7 +151,7 @@ export function isPluginSelfPath(path: string, configDir: string): boolean {
  * sync time only.
  */
 export function computeEffectiveFilterRules(
-	plugin: NutstorePlugin,
+	plugin: JASyncPlugin,
 ): EffectiveFilterRules {
 	const configDir = plugin.app.vault.configDir
 	const mode: ConfigDirSyncMode = plugin.settings.configDirSyncMode ?? 'none'

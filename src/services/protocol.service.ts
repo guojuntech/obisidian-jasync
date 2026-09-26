@@ -2,34 +2,19 @@ import { Notice } from 'obsidian'
 import { getProviderById } from '~/ai/catalog/config'
 import ProviderEditorModal from '~/components/ProviderEditorModal'
 import type { ChatModalMountTarget } from '~/ai/chat/ui/modal-mount'
-import { emitSsoReceive } from '~/events/sso-receive'
 import i18n from '~/i18n'
 import logger from '~/utils/logger'
 import { BaseService } from './service.interface'
-import type NutstorePlugin from '..'
+import type JASyncPlugin from '..'
 
 export default class ProtocolService extends BaseService {
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 	}
 
 	override onload() {
 		this.plugin.registerObsidianProtocolHandler(
-			'nutstore-sync/sso',
-			async (data) => {
-				if (data?.s) {
-					this.plugin.settings.oauthResponseText = data.s
-					await this.plugin.settingsService.saveSettings()
-					new Notice(i18n.t('settings.login.success'), 5000)
-				}
-				emitSsoReceive({
-					token: data?.s,
-				})
-			},
-		)
-
-		this.plugin.registerObsidianProtocolHandler(
-			'nutstore-sync/modal/provider-edit',
+			'omni-sync/modal/provider-edit',
 			async (data) => {
 				const providerId =
 					typeof data?.providerId === 'string' ? data.providerId.trim() : ''

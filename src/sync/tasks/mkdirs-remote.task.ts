@@ -32,7 +32,7 @@ export default class MkdirsRemoteTask extends BaseTask {
 			}
 			// Create the deepest directory with recursive: true
 			// This will automatically create all parent directories
-			await this.webdav.createDirectory(this.remotePath, {
+			await this.remoteStorage.createDirectory(this.remotePath, {
 				recursive: true,
 			})
 			return { success: true } as const

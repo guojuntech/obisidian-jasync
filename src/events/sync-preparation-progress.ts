@@ -1,16 +1,22 @@
 import { Subject } from 'rxjs'
-import type { WebDAVTraversalProgress } from '~/utils/traverse-webdav'
+import type { RemoteScanProgress } from '~/remote-storage/remote-scanner.interface'
+import type { SyncFileProgress } from '~/sync/safe/types'
 
 export type SyncPreparationPhase =
 	| 'checkingRemote'
+	| 'scanningLocal'
 	| 'loadingState'
 	| 'traversingRemote'
 	| 'analyzing'
 	| 'savingCache'
+	| 'checkingCapabilities'
+	| 'validating'
+	| 'recording'
 
 export interface SyncPreparationProgress {
 	phase: SyncPreparationPhase
-	traversal?: WebDAVTraversalProgress
+	traversal?: RemoteScanProgress
+	files?: SyncFileProgress
 }
 
 const syncPreparationProgress = new Subject<SyncPreparationProgress>()

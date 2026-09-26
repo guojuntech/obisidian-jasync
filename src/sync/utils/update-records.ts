@@ -1,7 +1,7 @@
 import { chunk, debounce, isNil } from 'lodash-es'
 import { Vault } from 'obsidian'
 import { emitSyncUpdateMtimeProgress } from '~/events'
-import { NutstoreFileSystem } from '~/fs/nutstore'
+import type IFileSystem from '~/fs/fs.interface'
 import { syncRecordKV } from '~/storage'
 import { blobStore } from '~/storage/blob'
 import type { SyncRecordModel } from '~/model/sync-record.model'
@@ -10,12 +10,9 @@ import type { SyncLogger } from '~/sync/log'
 import MkdirsRemoteTask from '~/sync/tasks/mkdirs-remote.task'
 import type { BaseTask, TaskResult } from '~/sync/tasks/task.interface'
 import { isMergeablePath } from '~/sync/utils/is-mergeable-path'
-import { getDBKey } from '~/utils/get-db-key'
 import { isSub } from '~/utils/is-sub'
 import { readLocalBinary } from '~/utils/local-vault-io'
 import { statVaultItem } from '~/utils/stat-vault-item'
-import { stdRemotePath } from '~/utils/std-remote-path'
-import type NutstorePlugin from '../..'
 import RemoveRemoteRecursivelyTask from '../tasks/remove-remote-recursively.task'
 
 export interface UpdateMtimeProgress {
@@ -36,9 +33,9 @@ export function countRecordUpdateOperations(tasks: BaseTask[]): number {
  * 批量更新同步记录的工具函数
  */
 export async function updateMtimeInRecord(
-	plugin: NutstorePlugin,
+	remoteFs: IFileSystem,
 	vault: Vault,
-	remoteBaseDir: string,
+	recordKey: string,
 	tasks: BaseTask[],
 	results: TaskResult[],
 	batch_size: number,
@@ -60,23 +57,11 @@ export async function updateMtimeInRecord(
 		return
 	}
 
-	const token = await plugin.getToken()
-	const remoteFs = new NutstoreFileSystem({
-		settings: plugin.settings,
-		vault,
-		token,
-		remoteAccountId: await plugin.getRemoteAccountId(),
-		remoteBaseDir: stdRemotePath(remoteBaseDir),
-	})
-
 	const latestRemoteEntities = await remoteFs.walk()
 	const remoteEntityMap = new Map(
 		latestRemoteEntities.map((e) => [e.stat.path, e]),
 	)
-	const syncRecord = new SyncRecord(
-		getDBKey(vault.getName(), remoteBaseDir),
-		syncRecordKV,
-	)
+	const syncRecord = new SyncRecord(recordKey, syncRecordKV)
 	const records = await syncRecord.getRecords()
 	const startAt = Date.now()
 

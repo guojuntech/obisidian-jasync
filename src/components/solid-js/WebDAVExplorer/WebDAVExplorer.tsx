@@ -8,6 +8,7 @@ import { fs } from './fs'
 
 export interface WebDAVExplorerProps {
 	fs: fs
+	readOnly?: boolean
 	onConfirm: (path: string) => void
 	onClose: () => void
 }
@@ -68,9 +69,11 @@ function App(props: WebDAVExplorerProps) {
 			</div>
 			<div class=":uno: flex items-center gap-2">
 				<button onClick={pop}>{t('webdavExplorer.actions.goBack')}</button>
-				<a class=":uno: no-underline" onClick={() => setShowNewFolder(true)}>
-					{t('webdavExplorer.actions.newFolder')}
-				</a>
+				<Show when={!props.readOnly}>
+					<a class=":uno: no-underline" onClick={() => setShowNewFolder(true)}>
+						{t('webdavExplorer.actions.newFolder')}
+					</a>
+				</Show>
 				<div class=":uno: flex-1" />
 				<button onClick={() => props.onClose()}>
 					{t('webdavExplorer.actions.cancel')}

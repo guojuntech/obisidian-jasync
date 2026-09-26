@@ -6,21 +6,24 @@ import {
 	getSyncPolicyDescI18nKey,
 	getSyncPolicyNameI18nKey,
 	SyncPolicy,
-	type NutstoreLocalSettings,
-	type NutstoreSettings,
+	type JASyncLocalSettings,
+	type JASyncSettings,
 } from '../settings'
 
 export default class SyncConfirmModal extends Modal {
 	private selectedPolicy: SyncPolicy
+	private readonly remoteTarget: string
 
 	constructor(
 		app: App,
-		private settings: NutstoreSettings,
-		localSettings: NutstoreLocalSettings,
+		private settings: JASyncSettings,
+		localSettings: JASyncLocalSettings,
 		private onConfirm: (policy: SyncPolicy) => void,
 	) {
 		super(app)
 		this.selectedPolicy = localSettings.syncPolicy
+		const prefix = localSettings.s3.prefix.replace(/^\/+|\/+$/g, '')
+		this.remoteTarget = `s3://${localSettings.s3.bucket.trim()}/${prefix ? `${prefix}/` : ''}`
 	}
 
 	async onOpen() {
@@ -38,8 +41,8 @@ export default class SyncConfirmModal extends Modal {
 
 		const infoDiv = bodyEl.createDiv({ cls: ':uno: sync-info' })
 		infoDiv.createEl('p', {
-			text: i18n.t('sync.confirmModal.remoteDir', {
-				dir: this.settings.remoteDir,
+			text: i18n.t('sync.confirmModal.remoteTarget', {
+				target: this.remoteTarget,
 			}),
 		})
 		const conflictStrategyInfo = infoDiv.createEl('p')
@@ -84,7 +87,7 @@ export default class SyncConfirmModal extends Modal {
 			const radio = option.createEl('input', {
 				type: 'radio',
 				value: policy,
-				attr: { name: 'nutstore-sync-policy' },
+				attr: { name: 'omni-sync-policy' },
 			})
 			radio.checked = policy === this.selectedPolicy
 			radio.addEventListener('change', () => {

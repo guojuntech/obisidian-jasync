@@ -1,10 +1,9 @@
 {
-	"id": "nutstore-sync",
-	"name": "Nutstore Sync",
-	"version": "1.5.0",
+	"id": "omni-sync",
+	"name": "JASync",
+	"version": "0.2.4",
 	"minAppVersion": "1.7.2",
-	"description": "Sync your vault with Nutstore/坚果云 using WebDAV protocol.",
-	"author": "nutstore",
-	"authorUrl": "https://github.com/nutstore",
+	"description": "S3 synchronization with plan confirmation, conflict handling and recovery backups.",
+	"author": "guojuntech",
 	"isDesktopOnly": false
 }

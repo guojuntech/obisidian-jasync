@@ -1,7 +1,6 @@
 import { parse as bytesParse } from 'bytes-iec'
 import { clamp, isNil } from 'lodash-es'
 import { DropdownComponent, Notice, Setting, TextComponent } from 'obsidian'
-import SelectRemoteBaseDirModal from '~/components/SelectRemoteBaseDirModal'
 import SyncPolicyModal from '~/components/SyncPolicyModal'
 import i18n from '~/i18n'
 import { ConflictStrategy } from '~/sync/tasks/conflict-resolve.task'
@@ -11,12 +10,9 @@ import {
 	MIN_MOBILE_APP_DOWNLOAD_FILE_CHUNK_BYTES,
 	normalizeByteSizeInput,
 } from '~/utils/download-chunk-size'
-import { SyncPolicy, SyncMode } from './index'
+import { SyncPolicy } from './index'
 import BaseSettings from './settings.base'
 
-/**
- * https://help.jianguoyun.com/?p=2064
- */
 const MAX_FILE_SIZE = '500MB'
 const MAX_BYTES = bytesParse(MAX_FILE_SIZE, { mode: 'jedec' })!
 
@@ -26,37 +22,6 @@ export default class CommonSettings extends BaseSettings {
 		new Setting(this.containerEl)
 			.setName(i18n.t('settings.sections.common'))
 			.setHeading()
-
-		new Setting(this.containerEl)
-			.setName(i18n.t('settings.remoteDir.name'))
-			.setDesc(i18n.t('settings.remoteDir.desc'))
-			.addText((text) => {
-				text
-					.setPlaceholder(i18n.t('settings.remoteDir.placeholder'))
-					.setValue(this.plugin.remoteBaseDir)
-					.onChange(async (value) => {
-						this.plugin.settings.remoteDir = value
-						await this.plugin.settingsService.saveSettings()
-					})
-				text.inputEl.addEventListener('blur', () => {
-					this.plugin.settings.remoteDir = this.plugin.remoteBaseDir
-					void this.display()
-				})
-			})
-			.addButton((button) => {
-				button.setIcon('folder').onClick(() => {
-					// 检查账号配置
-					if (!this.plugin.isAccountConfigured()) {
-						new Notice(i18n.t('sync.error.accountNotConfigured'))
-						return
-					}
-					new SelectRemoteBaseDirModal(this.app, this.plugin, async (path) => {
-						this.plugin.settings.remoteDir = path
-						await this.plugin.settingsService.saveSettings()
-						void this.display()
-					}).open()
-				})
-			})
 
 		let syncPolicyDropdown!: DropdownComponent
 		new Setting(this.containerEl)
@@ -301,20 +266,6 @@ export default class CommonSettings extends BaseSettings {
 				text.inputEl.max = MAX_MINUTES.toString()
 				text.inputEl.step = '1'
 			})
-
-		new Setting(this.containerEl)
-			.setName(i18n.t('settings.syncMode.name'))
-			.setDesc(i18n.t('settings.syncMode.desc'))
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption(SyncMode.STRICT, i18n.t('settings.syncMode.strict'))
-					.addOption(SyncMode.LOOSE, i18n.t('settings.syncMode.loose'))
-					.setValue(this.plugin.settings.syncMode)
-					.onChange(async (value: string) => {
-						this.plugin.settings.syncMode = value as SyncMode
-						await this.plugin.settingsService.saveSettings()
-					}),
-			)
 
 		new Setting(this.containerEl)
 			.setName(i18n.t('settings.language.name'))

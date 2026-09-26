@@ -1,14 +1,14 @@
+import { createRemoteSession } from './remote-storage/factory'
 import 'blob-polyfill'
 
 import './polyfill'
-import './webdav-patch'
 
 import './assets/styles/global.css'
 
-import { toBase64 } from 'js-base64'
-import { Menu, normalizePath, Plugin } from 'obsidian'
+import { Menu, Plugin } from 'obsidian'
 import { createSelectedTextContextItem } from './ai/chat/context/user-context'
-import { registerChatboxAiIcon } from './assets/icons/obsidian-nutstore-ai-icon'
+import { registerChatboxAiIcon } from './assets/icons/chatbox-ai-icon'
+import { registerJASyncIcon } from './assets/icons/jasync-sync-icon'
 import { SyncRibbonManager } from './components/SyncRibbonManager'
 import { emitCancelSync } from './events'
 import i18n from './i18n'
@@ -21,7 +21,6 @@ import I18nService from './services/i18n.service'
 import LoggerService from './services/logger.service'
 import McpService from './services/mcp.service'
 import ModelsPresetService from './services/models-preset.service'
-import NutstoreLlmGatewayService from './services/nutstore-llm-gateway.service'
 import { ProgressService } from './services/progress.service'
 import ProtocolService from './services/protocol.service'
 import RealtimeSyncService from './services/realtime-sync.service'
@@ -30,22 +29,19 @@ import { BaseService } from './services/service.interface'
 import SettingsService from './services/settings.service'
 import { StatusService } from './services/status.service'
 import SyncExecutorService from './services/sync-executor.service'
-import { WebDAVService } from './services/webdav.service'
 import {
-	NutstoreLocalSettings,
-	NutstoreSettings,
-	NutstoreSettingTab,
+	JASyncLocalSettings,
+	JASyncSettings,
+	JASyncSettingTab,
 } from './settings'
-import { decryptOAuthResponse } from './utils/decrypt-ticket-response'
-import { stdRemotePath } from './utils/std-remote-path'
 import ChatboxView, { CHATBOX_VIEW_TYPE } from './views/chatbox.view'
 
-export default class NutstorePlugin extends Plugin {
-	declare public settings: NutstoreSettings
+export default class JASyncPlugin extends Plugin {
+	declare public settings: JASyncSettings
 
 	public isSyncing: boolean = false
-	public localSettings!: NutstoreLocalSettings
-	public settingTab!: NutstoreSettingTab
+	public localSettings!: JASyncLocalSettings
+	public settingTab!: JASyncSettingTab
 
 	public commandService = new CommandService(this)
 	public eventsService = new EventsService(this)
@@ -53,12 +49,10 @@ export default class NutstorePlugin extends Plugin {
 	public loggerService = new LoggerService(this)
 	public mcpService = new McpService(this)
 	public modelsPresetService = new ModelsPresetService(this)
-	public nutstoreLlmGatewayService = new NutstoreLlmGatewayService(this)
 	public protocolService = new ProtocolService(this)
 	public progressService = new ProgressService(this)
 	public ribbonService = new SyncRibbonManager(this)
 	public statusService = new StatusService(this)
-	public webDAVService = new WebDAVService(this)
 	public settingsService = new SettingsService(this)
 	public syncExecutorService = new SyncExecutorService(this)
 	public gcService = new GcService(this)
@@ -77,8 +71,6 @@ export default class NutstorePlugin extends Plugin {
 		return [
 			this.loggerService,
 			this.modelsPresetService,
-			this.nutstoreLlmGatewayService,
-			this.webDAVService,
 			this.syncExecutorService,
 			this.gcService,
 			this.settingsService,
@@ -98,22 +90,19 @@ export default class NutstorePlugin extends Plugin {
 	}
 
 	async onload() {
+		registerJASyncIcon()
 		registerChatboxAiIcon()
 		for (const service of this.services) {
 			await service.onload()
 		}
-		this.settingTab = new NutstoreSettingTab(this.app, this)
+		this.settingTab = new JASyncSettingTab(this.app, this)
 		this.addSettingTab(this.settingTab)
 		this.registerView(CHATBOX_VIEW_TYPE, (leaf) => new ChatboxView(leaf, this))
 		this.registerEvent(
 			this.app.workspace.on('editor-menu', (menu: Menu, editor, view) => {
 				if (!editor.somethingSelected()) return
 				menu.addItem((item) => {
-					item
-						.setTitle(
-							i18n.language.startsWith('zh') ? '坚果云同步' : 'Nutstore Sync',
-						)
-						.setIcon('cloud')
+					item.setTitle(this.manifest.name).setIcon('cloud')
 					item.setSubmenu()
 					const submenu = item.submenu
 					if (!submenu) return
@@ -152,8 +141,6 @@ export default class NutstorePlugin extends Plugin {
 	}
 
 	onunload() {
-		this.settingTab?.unload()
-
 		emitCancelSync()
 		for (const service of [...this.services].reverse()) {
 			void service.onunload()
@@ -165,60 +152,19 @@ export default class NutstorePlugin extends Plugin {
 		this.ribbonService.update()
 	}
 
-	async getDecryptedOAuthInfo() {
-		return decryptOAuthResponse(this.settings.oauthResponseText)
+	createRemoteSession() {
+		return createRemoteSession(this.localSettings.s3)
 	}
 
-	async getToken() {
-		let token
-		if (this.settings.loginMode === 'sso') {
-			let oauth
-			try {
-				oauth = await this.getDecryptedOAuthInfo()
-			} catch {
-				throw new Error(i18n.t('sync.error.ssoTokenInvalid'))
-			}
-			token = `${oauth.username}:${oauth.access_token}`
-		} else {
-			token = `${this.settings.account}:${this.settings.credential}`
-		}
-		return toBase64(token)
-	}
-
-	async getRemoteAccountId() {
-		if (this.settings.loginMode === 'sso') {
-			return (await this.getDecryptedOAuthInfo()).username.trim()
-		}
-		return this.settings.account.trim()
-	}
-
-	/**
-	 * 检查账号配置是否完整
-	 * @returns true 表示配置完整，false 表示未配置或配置不完整
-	 */
 	isAccountConfigured(): boolean {
-		if (this.settings.loginMode === 'sso') {
-			// SSO 模式：检查是否有 OAuth 响应数据
-			return (
-				!!this.settings.oauthResponseText &&
-				this.settings.oauthResponseText.trim() !== ''
-			)
-		} else {
-			// 手动模式：检查账号和凭证是否都已填写
-			return (
-				!!this.settings.account &&
-				this.settings.account.trim() !== '' &&
-				!!this.settings.credential &&
-				this.settings.credential.trim() !== ''
-			)
-		}
+		const { bucket, region, accessKeyId, secretAccessKey } =
+			this.localSettings.s3
+		return Boolean(
+			bucket.trim() && region.trim() && accessKeyId.trim() && secretAccessKey,
+		)
 	}
 
 	get remoteBaseDir() {
-		let remoteDir = normalizePath(this.settings.remoteDir.trim())
-		if (remoteDir === '' || remoteDir === '/') {
-			remoteDir = this.app.vault.getName()
-		}
-		return stdRemotePath(remoteDir)
+		return '/'
 	}
 }

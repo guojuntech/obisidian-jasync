@@ -1,19 +1,15 @@
 import { cloneDeep } from 'lodash-es'
 import { Modal, Notice, Setting, setIcon } from 'obsidian'
-import { Subscription } from 'rxjs'
 import {
 	createModelConfig,
 	createProviderConfig,
 	createProviderFromPreset,
 	listMissingPresetModelsForProvider,
-	listModels,
 	listPresetProviders,
 	listProviders,
 } from '~/ai/catalog/config'
 import { AIProviderConfig } from '~/ai/core/types'
 import { getProviderDefaultBaseURL } from '~/ai/providers/defaults'
-import { NUTSTORE_LLM_GATEWAY_PROVIDER_ID } from '~/consts'
-import { onNutstoreLlmGatewayAuth } from '~/events/nutstore-llm-gateway-auth'
 import i18n from '~/i18n'
 import {
 	addClassTokens,
@@ -21,8 +17,7 @@ import {
 	toggleClassTokens,
 } from '~/utils/class-tokens'
 import logger from '~/utils/logger'
-import type NutstorePlugin from '..'
-import NutstoreLlmGatewayBetaConfirmModal from './NutstoreLlmGatewayBetaConfirmModal'
+import type JASyncPlugin from '..'
 import ProviderEditorModal from './ProviderEditorModal'
 import ProviderModelsUpdateConfirmModal from './ProviderModelsUpdateConfirmModal'
 
@@ -35,7 +30,6 @@ interface PresetModelsRefreshSummary {
 
 export default class ProvidersManagerModal extends Modal {
 	private selectedPresetId = CUSTOM_OPTION
-	private authSubscription: Subscription | null = null
 	private presetModelsRefreshState: PresetModelsRefreshState = 'idle'
 	private presetModelsRefreshSummary: PresetModelsRefreshSummary = {
 		providersDelta: 0,
@@ -43,16 +37,13 @@ export default class ProvidersManagerModal extends Modal {
 	}
 
 	constructor(
-		private plugin: NutstorePlugin,
+		private plugin: JASyncPlugin,
 		private onChanged: () => Promise<void> | void,
 	) {
 		super(plugin.app)
 	}
 
 	onOpen() {
-		this.authSubscription = onNutstoreLlmGatewayAuth().subscribe(() => {
-			this.render()
-		})
 		this.render()
 	}
 
@@ -201,12 +192,7 @@ export default class ProvidersManagerModal extends Modal {
 					}),
 			)
 
-		this.renderNutstoreGatewaySection()
-
-		const providers = listProviders(this.plugin.settings.ai.providers).filter(
-			(provider) =>
-				!this.plugin.nutstoreLlmGatewayService.isManagedProvider(provider),
-		)
+		const providers = listProviders(this.plugin.settings.ai.providers)
 		if (providers.length === 0) {
 			contentEl.createDiv({
 				cls: ':uno: setting-item-description',
@@ -331,161 +317,9 @@ export default class ProvidersManagerModal extends Modal {
 		return `${value}`
 	}
 
-	private renderNutstoreGatewaySection() {
-		const { contentEl } = this
-		const isAuthorized = this.plugin.nutstoreLlmGatewayService.isAuthorized()
-		const isAuthorizing = this.plugin.nutstoreLlmGatewayService.isAuthorizing()
-		const pendingAuthorization =
-			this.plugin.nutstoreLlmGatewayService.getPendingAuthorization()
-		const provider =
-			this.plugin.settings.ai.providers[NUTSTORE_LLM_GATEWAY_PROVIDER_ID]
-		const modelsCount = listModels(provider).length
-
-		const setting = new Setting(contentEl)
-			.setName(i18n.t('settings.ai.nutstoreLlmGateway.name'))
-			.setDesc(
-				isAuthorized
-					? i18n.t('settings.ai.nutstoreLlmGateway.connectedDesc', {
-							count: modelsCount,
-						})
-					: pendingAuthorization
-						? i18n.t('settings.ai.nutstoreLlmGateway.pendingDesc', {
-								code: pendingAuthorization.userCode,
-							})
-						: i18n.t('settings.ai.nutstoreLlmGateway.desc'),
-			)
-
-		if (!isAuthorized) {
-			setting.addButton((button) => {
-				button
-					.setButtonText(
-						isAuthorizing
-							? i18n.t('settings.ai.nutstoreLlmGateway.authorizing')
-							: i18n.t('settings.ai.nutstoreLlmGateway.authorize'),
-					)
-					.setDisabled(isAuthorizing)
-				if (isAuthorizing) {
-					addClassTokens(
-						button.buttonEl,
-						':uno: connection-button',
-						':uno: loading',
-						':uno: opacity-50',
-						':uno: pointer-events-none',
-					)
-					return
-				}
-				button.onClick(() => {
-					new NutstoreLlmGatewayBetaConfirmModal(this.plugin.app, async () => {
-						try {
-							await this.plugin.nutstoreLlmGatewayService.startAuthorization()
-							await this.plugin.nutstoreLlmGatewayService.openPendingAuthorizationPage()
-							this.render()
-						} catch (error) {
-							logger.error(error)
-							new Notice(
-								error instanceof Error
-									? error.message
-									: i18n.t('settings.login.failure'),
-								10000,
-							)
-						}
-					}).open()
-				})
-			})
-			if (pendingAuthorization) {
-				setting.addButton((button) =>
-					button
-						.setButtonText(
-							i18n.t('settings.ai.nutstoreLlmGateway.openAuthorizationPage'),
-						)
-						.onClick(async () => {
-							try {
-								await this.plugin.nutstoreLlmGatewayService.openPendingAuthorizationPage()
-							} catch (error) {
-								logger.error(error)
-								new Notice(
-									error instanceof Error
-										? error.message
-										: i18n.t('settings.login.failure'),
-									10000,
-								)
-							}
-						}),
-				)
-				setting.addButton((button) => {
-					button.buttonEl.addClass('mod-warning')
-					button
-						.setButtonText(
-							i18n.t('settings.ai.nutstoreLlmGateway.cancelAuthorization'),
-						)
-						.onClick(async () => {
-							await this.plugin.nutstoreLlmGatewayService.disconnect()
-							this.render()
-						})
-				})
-			}
-			return
-		}
-
-		setting
-			.addButton((button) =>
-				button
-					.setButtonText(i18n.t('settings.ai.nutstoreLlmGateway.refreshModels'))
-					.onClick(async () => {
-						try {
-							await this.plugin.nutstoreLlmGatewayService.refreshModels({
-								removeOnAuthError: true,
-							})
-							await this.plugin.settingsService.saveSettings()
-							this.render()
-						} catch (error) {
-							logger.error(error)
-							new Notice(
-								error instanceof Error
-									? error.message
-									: i18n.t(
-											'settings.ai.nutstoreLlmGateway.errors.refreshFailed',
-										),
-								10000,
-							)
-						}
-					}),
-			)
-			.addButton((button) => {
-				let confirmDisconnect = false
-
-				const resetButton = () => {
-					confirmDisconnect = false
-					button.buttonEl.empty()
-					setIcon(button.buttonEl, 'trash')
-					removeClassTokens(button.buttonEl, ':uno: mod-warning')
-				}
-
-				button.setIcon('trash').onClick(async () => {
-					if (!confirmDisconnect) {
-						confirmDisconnect = true
-						button.buttonEl.empty()
-						button.buttonEl.createSpan({
-							text: i18n.t('settings.ai.modals.confirmDeleteLabel'),
-						})
-						addClassTokens(button.buttonEl, ':uno: mod-warning')
-						return
-					}
-					await this.plugin.nutstoreLlmGatewayService.disconnect()
-					this.render()
-				})
-
-				button.buttonEl.addEventListener('blur', resetButton)
-			})
-	}
-
 	private validateProviderKey(provider: AIProviderConfig, currentId?: string) {
 		if (!provider.id) {
 			new Notice(i18n.t('settings.ai.errors.emptyProviderId'))
-			return false
-		}
-		if (this.plugin.nutstoreLlmGatewayService.isProviderId(provider.id)) {
-			new Notice(i18n.t('settings.ai.errors.reservedProviderId'))
 			return false
 		}
 		const existing = this.plugin.settings.ai.providers[provider.id]
@@ -550,8 +384,6 @@ export default class ProvidersManagerModal extends Modal {
 	}
 
 	onClose() {
-		this.authSubscription?.unsubscribe()
-		this.authSubscription = null
 		this.contentEl.empty()
 	}
 }

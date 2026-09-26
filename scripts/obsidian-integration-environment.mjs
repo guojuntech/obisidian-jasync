@@ -1,4 +1,5 @@
 import { access, mkdir } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 
@@ -7,6 +8,10 @@ import { join } from 'node:path'
 // local cache path instead of a directory inside the working tree.
 const MICRO_SANDBOX_ROOT = '/tmp/nutstore-obsidian-e2e'
 const OBSIDIAN_VERSION = '1.13.7'
+const LOCAL_APPIMAGE = process.env.OBSIDIAN_E2E_APPIMAGE
+const LOCAL_APPIMAGE_HASH = LOCAL_APPIMAGE
+	? createHash('sha256').update(readFileSync(LOCAL_APPIMAGE)).digest('hex')
+	: undefined
 const OBSIDIAN_URL =
 	'https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/Obsidian-1.13.7-arm64.AppImage'
 const UBUNTU_IMAGE =
@@ -42,6 +47,7 @@ const environmentKey = createHash('sha256')
 			schema: 1,
 			obsidianVersion: OBSIDIAN_VERSION,
 			obsidianUrl: OBSIDIAN_URL,
+			localAppImageHash: LOCAL_APPIMAGE_HASH,
 			ubuntuImage: UBUNTU_IMAGE,
 			packages,
 		}),
@@ -62,10 +68,12 @@ function bootstrapScript() {
 	return [
 		'set -eux',
 		'export DEBIAN_FRONTEND=noninteractive',
-		'apt-get update',
-		`apt-get install -y --no-install-recommends ${packages.join(' ')}`,
+		'apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=2 update',
+		`apt-get -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=2 install -y --no-install-recommends ${packages.join(' ')}`,
 		'mkdir -p /opt/obsidian',
-		`curl --fail --location --retry 3 --output /opt/obsidian/Obsidian.AppImage ${OBSIDIAN_URL}`,
+		LOCAL_APPIMAGE
+			? 'test -f /opt/obsidian/Obsidian.AppImage'
+			: `curl --fail --location --connect-timeout 15 --max-time 180 --retry 3 --output /opt/obsidian/Obsidian.AppImage ${OBSIDIAN_URL}`,
 		'chmod +x /opt/obsidian/Obsidian.AppImage',
 		'cd /opt/obsidian',
 		'./Obsidian.AppImage --appimage-extract',
@@ -104,6 +112,12 @@ export async function ensureObsidianSnapshot(log = console.log) {
 		.cpus(2)
 		.create()
 	try {
+		if (LOCAL_APPIMAGE) {
+			await sandbox.fs().mkdir('/opt/obsidian')
+			await sandbox
+				.fs()
+				.copyFromHost(LOCAL_APPIMAGE, '/opt/obsidian/Obsidian.AppImage')
+		}
 		const output = await sandbox.shell(bootstrapScript())
 		if (!output.success) {
 			throw new Error(

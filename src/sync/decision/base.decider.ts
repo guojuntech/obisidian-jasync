@@ -3,7 +3,7 @@ import { blobStore } from '~/storage/blob'
 import { SyncRecord } from '~/storage/sync-record'
 import { existsLocalPath, readLocalBinary } from '~/utils/local-vault-io'
 import { MaybePromise } from '~/utils/types'
-import { NutstoreSync } from '..'
+import { JASyncCoordinator } from '..'
 import CleanRecordTask from '../tasks/clean-record.task'
 import ConflictResolveTask from '../tasks/conflict-resolve.task'
 import FilenameErrorTask from '../tasks/filename-error.task'
@@ -27,7 +27,7 @@ import {
 
 export default abstract class BaseSyncDecider {
 	constructor(
-		protected sync: NutstoreSync,
+		protected sync: JASyncCoordinator,
 		protected syncRecordStorage: SyncRecord,
 	) {}
 
@@ -46,7 +46,7 @@ export default abstract class BaseSyncDecider {
 		])
 
 		const commonTaskOptions = {
-			webdav: this.webdav,
+			remoteStorage: this.remoteStorage,
 			vault: this.vault,
 			remoteBaseDir: this.remoteBaseDir,
 			syncRecord: syncRecordStorage,
@@ -114,8 +114,8 @@ export default abstract class BaseSyncDecider {
 		}
 	}
 
-	get webdav() {
-		return this.sync.webdav
+	get remoteStorage() {
+		return this.sync.remoteStorage
 	}
 
 	get settings() {

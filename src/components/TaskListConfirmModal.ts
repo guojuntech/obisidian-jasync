@@ -17,16 +17,22 @@ export default class TaskListConfirmModal extends Modal {
 	constructor(
 		app: App,
 		private tasks: BaseTask[],
+		private previewOnly = false,
 	) {
 		super(app)
 		this.selectedTasks = Array.from({ length: tasks.length }, () => true)
 	}
 
 	onOpen() {
-		this.setTitle(i18n.t('taskList.title'))
+		this.setTitle(
+			this.previewOnly ? i18n.t('s3.previewTitle') : i18n.t('taskList.title'),
+		)
 
 		const { contentEl } = this
 		contentEl.empty()
+		if (this.previewOnly)
+			contentEl.createEl('p', { text: i18n.t('s3.previewNotice') })
+		else contentEl.createEl('p', { text: i18n.t('taskList.instruction') })
 
 		const listContainer = contentEl.createDiv({
 			cls: ':uno: h-[60vh] min-h-[16rem] w-full',
@@ -61,14 +67,16 @@ export default class TaskListConfirmModal extends Modal {
 			.addButton((button) => {
 				updateContinueButtonText = () => {
 					button.setButtonText(
-						i18n.t('taskList.continue', {
-							count: this.selectedTasks.filter(Boolean).length,
-						}),
+						this.previewOnly
+							? i18n.t('s3.closePreview')
+							: i18n.t('taskList.continue', {
+									count: this.selectedTasks.filter(Boolean).length,
+								}),
 					)
 				}
 				updateContinueButtonText()
 				button.setCta().onClick(() => {
-					this.result = true
+					this.result = !this.previewOnly
 					this.close()
 				})
 			})

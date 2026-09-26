@@ -20,7 +20,7 @@ describe('main system prompt Skills guidance', () => {
 			'Paths under /.agents/skills are user-defined Vault Skills',
 		)
 		expect(prompt).toContain(
-			'paths under /.agents/nutstore-sync/builtin-skills are bundled built-in Skills',
+			'paths under /.agents/omni-sync/builtin-skills are bundled built-in Skills',
 		)
 		expect(prompt).toContain('These namespaces are distinct')
 		expect(prompt).toContain(
@@ -37,9 +37,10 @@ describe('main system prompt Skills guidance', () => {
 		if (!definition) throw new Error('Expected master agent definition')
 		const prompt = createSystemPromptForAgent(definition)
 
-		expect(prompt).toContain('Nutstore Sync Obsidian plugin')
+		expect(prompt).toContain('JASync Obsidian plugin')
 		expect(prompt).toContain('Obsidian vault')
-		expect(prompt).toContain('WebDAV')
+		expect(prompt).toContain('S3 synchronization uses a reviewed plan')
+		expect(prompt).not.toContain('WebDAV')
 	})
 
 	it('delegates long-term memory instead of exposing it to the main agent', () => {
@@ -63,15 +64,15 @@ describe('virtual filesystem guidance', () => {
 
 		expect(prompt).toContain('<virtual-filesystem>')
 		expect(prompt).toContain('/ is the Obsidian vault base filesystem')
-		expect(prompt).toContain('/.agents/nutstore-sync/builtin-skills')
-		expect(prompt).toContain('/.config/nutstore-sync/settings.json')
+		expect(prompt).toContain('/.agents/omni-sync/builtin-skills')
+		expect(prompt).toContain('/.config/omni-sync/settings.json')
 		expect(prompt).toContain(
 			'This is a routing map, not an instruction to enumerate or scan every mount',
 		)
 		expect(prompt).toContain(
 			'Start with the smallest relevant scope and broaden only when evidence is insufficient',
 		)
-		expect(prompt).not.toContain('/.agents/nutstore-sync/memory')
+		expect(prompt).not.toContain('/.agents/omni-sync/memory')
 		expect(prompt).not.toContain(
 			'For ambiguous user requests, you may broaden exploration',
 		)
@@ -83,7 +84,7 @@ describe('virtual filesystem guidance', () => {
 		const prompt = createSystemPromptForAgent(definition)
 
 		expect(prompt).toContain('<virtual-filesystem>')
-		expect(prompt).toContain('/.agents/nutstore-sync/tmp')
+		expect(prompt).toContain('/.agents/omni-sync/tmp')
 		expect(prompt).toContain('read-only explorer subagent')
 	})
 

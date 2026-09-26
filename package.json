@@ -1,12 +1,12 @@
 {
-	"name": "obsidian-nutstore-sync",
-	"version": "1.5.0",
+	"name": "obsidian-omni-sync",
+	"version": "0.2.4",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "run-s lint build:plugin",
-		"build:plugin": "node esbuild.config.mjs production && swc ./dist/main.js -o main.js",
+		"build:plugin": "node esbuild.config.mjs production && swc ./dist/main.js -o main.js && node scripts/package-plugin.mjs",
 		"lint": "run-p lint:eslint lint:tsc",
 		"lint:eslint": "eslint . --max-warnings=0",
 		"lint:tsc": "tsc -noEmit -skipLibCheck",
@@ -27,7 +27,6 @@
 		"@codemirror/view": "6.36.4",
 		"@electron/remote": "^2.1.2",
 		"@modelcontextprotocol/sdk": "^1.30.0",
-		"@nutstore/sso-js": "^0.0.9",
 		"@solid-primitives/i18n": "^2.2.0",
 		"@tanstack/solid-table": "^8.21.3",
 		"@tanstack/solid-virtual": "^3.13.37",
@@ -61,9 +60,10 @@
 		"stream-browserify": "^3.0.0",
 		"superjson": "^2.2.2",
 		"uuid": "^13.0.0",
-		"webdav": "^5.10.0",
 		"yjs": "^13.6.31",
-		"zod": "^4.3.6"
+		"zod": "^4.3.6",
+		"aws4fetch": "^1.0.20",
+		"fast-xml-validator": "^1.0.0"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.1.0",
@@ -111,5 +111,6 @@
 		"stream": "stream-browserify",
 		"buffer": "buffer",
 		"crypto": "crypto-browserify"
-	}
+	},
+	"packageManager": "pnpm@9.15.9"
 }

@@ -1,5 +1,5 @@
 import { Vault } from 'obsidian'
-import type { NutstoreSettings } from '~/settings'
+import type { JASyncSettings } from '~/settings'
 import { SyncRecord } from '~/storage/sync-record'
 import {
 	ConfigDirSyncMode,
@@ -11,7 +11,6 @@ import {
 	isPathIncluded,
 } from '~/utils/glob-match'
 import { traverseLocalVault } from '~/utils/traverse-local-vault'
-import { isSyncCacheLocalPath } from '~/utils/sync-cache-file'
 import AbstractFileSystem from './fs.interface'
 import completeLossDir from './utils/complete-loss-dir'
 
@@ -25,7 +24,7 @@ export class LocalVaultFileSystem implements AbstractFileSystem {
 				configDir?: string
 				configDirSyncMode?: ConfigDirSyncMode
 			}
-			settings?: NutstoreSettings
+			settings?: JASyncSettings
 		},
 	) {}
 
@@ -48,10 +47,8 @@ export class LocalVaultFileSystem implements AbstractFileSystem {
 			this.options.vault,
 			this.options.vault.getRoot().path,
 		)
-		const includedStats = stats.filter(
-			(stat) =>
-				!isSyncCacheLocalPath(stat.path, this.options.vault.configDir) &&
-				isPathIncluded(stat.path, compiledRules, stat.isDir),
+		const includedStats = stats.filter((stat) =>
+			isPathIncluded(stat.path, compiledRules, stat.isDir),
 		)
 		const completeStats = completeLossDir(stats, includedStats)
 		const completeStatPaths = new Set(completeStats.map((s) => s.path))

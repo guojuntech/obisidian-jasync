@@ -1,16 +1,15 @@
+import {
+	DEFAULT_S3_SETTINGS,
+	type S3Settings,
+} from '~/remote-storage/s3/settings'
 import { App, PluginSettingTab, Setting } from 'obsidian'
-import { Subscription } from 'rxjs'
 import { AIProviderConfigs, AIProviderDefinitions } from '~/ai/core/types'
-import { onNutstoreLlmGatewayAuth } from '~/events/nutstore-llm-gateway-auth'
-import { onSsoReceive } from '~/events/sso-receive'
 import i18n from '~/i18n'
-import type NutstorePlugin from '~/index'
-import type { NutstoreLlmGatewayAuthSettings } from '~/services/nutstore-llm-gateway.service'
+import type JASyncPlugin from '~/index'
 import { ConflictStrategy } from '~/sync/tasks/conflict-resolve.task'
 import { DEFAULT_MOBILE_APP_DOWNLOAD_FILE_CHUNK_SIZE } from '~/utils/download-chunk-size'
 import { GlobFilterRule } from '~/utils/glob-match'
 import AccountSettings from './account'
-import AISettings from './ai'
 import CommonSettings from './common'
 import FilterSettings from './filter'
 import BaseSettings from './settings.base'
@@ -125,14 +124,8 @@ export function getSyncPolicyDescI18nKey(
 	}
 }
 
-export interface NutstoreSettings {
-	account: string
-	credential: string
-	nutstoreEnterpriseBaseUrl: string
-	remoteDir: string
+export interface JASyncSettings {
 	conflictStrategy: ConflictStrategy
-	oauthResponseText: string
-	loginMode: 'manual' | 'sso'
 	confirmBeforeSync: boolean
 	confirmBeforeDeleteInAutoSync: boolean
 	syncMode: SyncMode
@@ -155,7 +148,6 @@ export interface NutstoreSettings {
 			explorer: SubagentSettings
 			memory: SubagentSettings
 		}
-		nutstoreLlmGateway?: NutstoreLlmGatewayAuthSettings
 	}
 	configDirSyncMode?: 'none' | 'bookmarks' | 'all'
 }
@@ -176,20 +168,14 @@ function exclude(expr: string): GlobFilterRule {
 	}
 }
 
-export const DEFAULT_SETTINGS: NutstoreSettings = {
-	account: '',
-	credential: '',
-	nutstoreEnterpriseBaseUrl: '',
-	remoteDir: '',
+export const DEFAULT_SETTINGS: JASyncSettings = {
 	conflictStrategy: ConflictStrategy.NoConflictMerge,
-	oauthResponseText: '',
-	loginMode: 'sso',
 	confirmBeforeSync: true,
 	confirmBeforeDeleteInAutoSync: true,
 	syncMode: SyncMode.LOOSE,
 	filterRules: {
 		rules: [
-			'**/*.nutstore-sync-*.download',
+			'**/*.omni-sync-*.download',
 			'**/__MACOSX',
 			'**/.DS_Store',
 			'**/.env',
@@ -223,7 +209,7 @@ export const DEFAULT_SETTINGS: NutstoreSettings = {
 	mobileAppDownloadFileChunkSize: DEFAULT_MOBILE_APP_DOWNLOAD_FILE_CHUNK_SIZE,
 	realtimeSync: false,
 	startupSyncDelaySeconds: 0,
-	autoSyncIntervalSeconds: 300,
+	autoSyncIntervalSeconds: 0,
 	language: undefined,
 	ai: {
 		providers: {},
@@ -233,12 +219,14 @@ export const DEFAULT_SETTINGS: NutstoreSettings = {
 			explorer: { enabled: false },
 			memory: { enabled: false },
 		},
-		nutstoreLlmGateway: {},
 	},
 	configDirSyncMode: 'none',
 }
 
-export interface NutstoreLocalSettings {
+export interface JASyncLocalSettings {
+	executionVersion?: 1
+	s3: S3Settings
+	vaultId: string
 	syncPolicy: SyncPolicy
 	ai: {
 		presetModels?: AIProviderDefinitions
@@ -246,7 +234,9 @@ export interface NutstoreLocalSettings {
 	}
 }
 
-export const DEFAULT_LOCAL_SETTINGS: NutstoreLocalSettings = {
+export const DEFAULT_LOCAL_SETTINGS: JASyncLocalSettings = {
+	s3: { ...DEFAULT_S3_SETTINGS },
+	vaultId: '',
 	syncPolicy: SyncPolicy.TwoWay,
 	ai: {},
 }
@@ -256,28 +246,18 @@ interface SettingsSectionEntry {
 	containerEl: HTMLElement
 }
 
-export class NutstoreSettingTab extends PluginSettingTab {
-	plugin: NutstorePlugin
+export class JASyncSettingTab extends PluginSettingTab {
+	plugin: JASyncPlugin
 	accountSettings: AccountSettings
 	commonSettings: CommonSettings
 	filterSettings: FilterSettings
 	troubleshootingSettings: TroubleshootingSettings
-	aiSettings: AISettings
 	warningContainerEl: HTMLElement
 	private tabBarEl: HTMLElement
 	private activeTab: SettingsTabKey = 'sync'
 	private readonly tabSections: Record<SettingsTabKey, SettingsSectionEntry[]>
 
-	private readonly subscriptions: Subscription[] = [
-		onSsoReceive().subscribe(() => {
-			void this.rerenderIfVisible()
-		}),
-		onNutstoreLlmGatewayAuth().subscribe(() => {
-			void this.rerenderIfVisible()
-		}),
-	]
-
-	constructor(app: App, plugin: NutstorePlugin) {
+	constructor(app: App, plugin: JASyncPlugin) {
 		super(app, plugin)
 		this.plugin = plugin
 		this.tabBarEl = this.containerEl.createDiv()
@@ -303,8 +283,6 @@ export class NutstoreSettingTab extends PluginSettingTab {
 			this,
 			filterContainerEl,
 		)
-		const aiContainerEl = this.containerEl.createDiv()
-		this.aiSettings = new AISettings(this.app, this.plugin, this, aiContainerEl)
 		const troubleshootingContainerEl = this.containerEl.createDiv()
 		this.troubleshootingSettings = new TroubleshootingSettings(
 			this.app,
@@ -318,7 +296,6 @@ export class NutstoreSettingTab extends PluginSettingTab {
 				{ section: this.commonSettings, containerEl: commonContainerEl },
 				{ section: this.filterSettings, containerEl: filterContainerEl },
 			],
-			ai: [{ section: this.aiSettings, containerEl: aiContainerEl }],
 			troubleshooting: [
 				{
 					section: this.troubleshootingSettings,
@@ -380,10 +357,6 @@ export class NutstoreSettingTab extends PluginSettingTab {
 		}
 	}
 
-	get isSSO() {
-		return this.plugin.settings.loginMode === 'sso'
-	}
-
 	isVisible() {
 		return (
 			this.containerEl.isConnected &&
@@ -401,13 +374,7 @@ export class NutstoreSettingTab extends PluginSettingTab {
 	}
 
 	async onClose() {
-		await this.accountSettings.hide()
+		this.accountSettings.hide()
 		this.troubleshootingSettings.hide()
-	}
-
-	unload() {
-		for (const subscription of this.subscriptions) {
-			subscription.unsubscribe()
-		}
 	}
 }

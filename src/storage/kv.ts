@@ -1,11 +1,11 @@
 import localforage from 'localforage'
 import type { ChatSessionIndexItem } from '~/ai/chat/domain'
 import type { PersistedChatSession } from '~/ai/chat/session/session-persistence'
-import { StatModel } from '~/model/stat.model'
 import { SyncRecordModel } from '~/model/sync-record.model'
 import useStorage from './use-storage'
 
-const DB_NAME = 'Nutstore_Plugin_Cache'
+// Stable storage ID: preserve existing records across product renames.
+const DB_NAME = 'OmniSync_Plugin_Cache'
 
 function createRecoverableStorage<T>(storeName: string) {
 	return useStorage<T>({
@@ -22,23 +22,6 @@ export const syncRecordKV =
 	createRecoverableStorage<Map<string, SyncRecordModel>>('sync_record')
 
 export const blobKV = createRecoverableStorage<Blob>('base_blob_store')
-
-export interface TraverseWebDAVCache {
-	rootCursor: string
-	queue: string[]
-	nodes: Record<string, StatModel[]>
-}
-
-export const traverseWebDAVKV = createRecoverableStorage<TraverseWebDAVCache>(
-	'traverse_webdav_cache',
-)
-
-export interface CacheUploadMeta {
-	nodesHash: string
-}
-
-export const cacheUploadMetaKV =
-	createRecoverableStorage<CacheUploadMeta>('cache_upload_meta')
 
 export interface ChatMetaRecord {
 	activeSessionId?: string

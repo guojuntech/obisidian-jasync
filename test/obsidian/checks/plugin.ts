@@ -4,6 +4,8 @@ import { assert } from './assert'
 
 interface ProductionPlugin {
 	isSyncing: boolean
+	settingTab: { display(): void; containerEl: HTMLElement }
+	manifest: { id: string; name: string }
 	commandService: {
 		openChatbox(): Promise<void>
 	}
@@ -23,10 +25,8 @@ function getProductionPlugin(app: App): ProductionPlugin {
 	const plugins = (
 		app as unknown as { plugins: { plugins: Record<string, unknown> } }
 	).plugins
-	const plugin = plugins.plugins['nutstore-sync'] as
-		| ProductionPlugin
-		| undefined
-	assert(plugin, 'Nutstore Sync is not loaded')
+	const plugin = plugins.plugins['omni-sync'] as ProductionPlugin | undefined
+	assert(plugin, 'JASync is not loaded')
 	return plugin
 }
 
@@ -44,10 +44,10 @@ export async function reloadsProductionPlugin(app: App) {
 			}
 		}
 	).plugins
-	await plugins.disablePlugin('nutstore-sync')
-	await plugins.enablePlugin('nutstore-sync')
+	await plugins.disablePlugin('omni-sync')
+	await plugins.enablePlugin('omni-sync')
 	assert(
-		plugins.plugins['nutstore-sync'],
+		plugins.plugins['omni-sync'],
 		'Production plugin did not reload through the real lifecycle',
 	)
 }
@@ -68,14 +68,14 @@ export async function detachesChatboxWhenProductionPluginIsDisabled(app: App) {
 		'ChatBox view did not open before the production plugin was disabled',
 	)
 
-	await plugins.disablePlugin('nutstore-sync')
+	await plugins.disablePlugin('omni-sync')
 	try {
 		assert(
 			app.workspace.getLeavesOfType(CHATBOX_VIEW_TYPE).length === 0,
 			'ChatBox view remained attached after the production plugin was disabled',
 		)
 	} finally {
-		await plugins.enablePlugin('nutstore-sync')
+		await plugins.enablePlugin('omni-sync')
 	}
 
 	const reloadedPlugin = getProductionPlugin(app)
@@ -102,10 +102,10 @@ export async function rendersSyncProgress(app: App) {
 
 	try {
 		progress.showProgressModal()
-		const modal = document.querySelector('.modal.nutstore-sync-progress-modal')
+		const modal = document.querySelector('.modal.omni-sync-progress-modal')
 		assert(modal, 'Sync progress modal did not open')
 		assert(
-			modal.querySelector('.nutstore-sync-progress__status-icon--syncing'),
+			modal.querySelector('.omni-sync-progress__status-icon--syncing'),
 			'Sync progress modal did not render syncing state',
 		)
 
@@ -114,19 +114,15 @@ export async function rendersSyncProgress(app: App) {
 		progress.updateModal.flush?.()
 
 		assert(
-			modal.querySelector('.nutstore-sync-progress__status-icon--complete'),
+			modal.querySelector('.omni-sync-progress__status-icon--complete'),
 			'Sync progress modal did not render complete state',
 		)
-		const progressLabel = modal.querySelector(
-			'.nutstore-sync-progress__bar-label',
-		)
+		const progressLabel = modal.querySelector('.omni-sync-progress__bar-label')
 		assert(
 			progressLabel?.textContent?.includes('100'),
 			'Sync progress modal did not show 100% for an empty completed sync',
 		)
-		const stopButton = modal.querySelector(
-			'.nutstore-sync-progress__footer button',
-		)
+		const stopButton = modal.querySelector('.omni-sync-progress__footer button')
 		assert(
 			stopButton?.classList.contains('hidden'),
 			`Sync progress modal kept its stop control after completion: ${stopButton?.className ?? 'missing'}`,
@@ -135,4 +131,30 @@ export async function rendersSyncProgress(app: App) {
 		progress.closeProgressModal()
 		plugin.isSyncing = false
 	}
+}
+
+export async function rendersS3OnlySettings(app: App) {
+	const plugin = getProductionPlugin(app)
+	assert(plugin.manifest.id === 'omni-sync', 'Plugin ID is not isolated')
+	assert(
+		plugin.manifest.name === 'JASync',
+		'Plugin display name was not updated',
+	)
+	plugin.settingTab.display()
+	await new Promise((resolve) => window.setTimeout(resolve, 0))
+	const content = plugin.settingTab.containerEl.textContent ?? ''
+	assert(
+		content.includes('S3') &&
+			content.includes('Bucket') &&
+			content.includes('Prefix'),
+		'S3 settings are missing',
+	)
+	assert(
+		!/WebDAV|SSO|坚果云|Nutstore|OmniSync/i.test(content),
+		'A removed integration is still shown',
+	)
+	const inputs = plugin.settingTab.containerEl.querySelectorAll(
+		'input[type="password"]',
+	)
+	assert(inputs.length >= 3, 'S3 credential inputs are not masked')
 }

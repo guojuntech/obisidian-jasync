@@ -1,8 +1,8 @@
 import { z } from 'zod/mini'
-import { NUTSTORE_SYNC_AGENTS_MOUNT_POINT } from '~/ai/tools/bash/mount-points'
+import { JASYNC_AGENTS_MOUNT_POINT } from '~/ai/tools/bash/mount-points'
 
-export const MCP_CONFIG_VAULT_PATH = '.agents/nutstore-sync/mcp.json'
-export const MCP_CONFIG_VIRTUAL_PATH = `${NUTSTORE_SYNC_AGENTS_MOUNT_POINT}/mcp.json`
+export const MCP_CONFIG_VAULT_PATH = '.agents/omni-sync/mcp.json'
+export const MCP_CONFIG_VIRTUAL_PATH = `${JASYNC_AGENTS_MOUNT_POINT}/mcp.json`
 
 export const MCP_TOOL_NAME_PREFIX = 'mcp__'
 

@@ -8,33 +8,13 @@
 			"desc": "选择界面语言",
 			"auto": "自动检测"
 		},
-		"account": {
-			"name": "账号",
-			"desc": "输入你的 WebDAV 账号",
-			"placeholder": "输入你的账号"
-		},
-		"credential": {
-			"name": "凭证",
-			"desc": "输入你在坚果云“安全选项”中创建的“应用密码”，不是你的登录密码",
-			"placeholder": "输入你的坚果云应用密码"
-		},
-		"remoteDir": {
-			"name": "远程目录",
-			"desc": "本仓库与坚果云的哪个文件夹同步。可点右侧文件夹按钮可视化选择。",
-			"placeholder": "例如 /MyNotes"
-		},
 		"checkConnection": {
 			"name": "检查连接",
-			"desc": "点击检查 WebDAV 连接",
-			"success": "WebDAV 连接成功",
-			"failure": "WebDAV 连接失败",
+			"desc": "点击检查 S3 连接",
+			"success": "S3 连接成功",
+			"failure": "S3 连接失败",
 			"successButton": "连接成功 ✓",
 			"failureButton": "连接失败 ×"
-		},
-		"login": {
-			"name": "登录",
-			"success": "登录成功",
-			"failure": "登录失败，请重试"
 		},
 		"backupWarning": {
 			"name": "备份提醒",
@@ -42,44 +22,11 @@
 		},
 		"conflictStrategy": {
 			"name": "冲突解决策略",
-			"desc": "选择解决文件冲突的方式。\n注意：建议在使用自动合并功能前，先手动备份重要文件，以防数据丢失。",
+			"desc": "仅在有可靠共同版本时合并文本；无法安全合并的冲突保留两份。优先策略会在备份后覆盖另一侧。",
 			"noConflictMerge": "无冲突合并",
-			"diff3": "自动合并（保留双方改动并用标记标出）",
+			"diff3": "三方合并（冲突保留副本）",
 			"localPriority": "本地优先（覆盖服务器）",
 			"serverPriority": "服务器优先（覆盖本地）"
-		},
-		"loginMode": {
-			"name": "登录方式",
-			"manual": "手动输入",
-			"sso": "单点登录"
-		},
-		"ssoStatus": {
-			"loggedIn": "已登录",
-			"notLoggedIn": "未登录",
-			"logout": "退出登录",
-			"logoutSuccess": "已退出登录"
-		},
-		"logout": {
-			"confirmTitle": "确认退出",
-			"confirmMessage": "确定要退出登录吗？退出后需要重新登录才能继续同步。",
-			"confirm": "确认退出",
-			"cancel": "取消"
-		},
-		"help": {
-			"name": "如何获取 WebDAV 账号和凭证？"
-		},
-		"enterpriseBaseUrl": {
-			"name": "企业版坚果云",
-			"desc": "可选配置企业版坚果云 Base URL，留空则使用默认地址。例如：https://dav.jianguoyun.com",
-			"action": "设置",
-			"modalTitle": "设置企业版坚果云 Base URL",
-			"placeholder": "例如 https://dav.jianguoyun.com",
-			"invalid": "Base URL 不合法",
-			"invalidWithReason": "Base URL 不合法：{{reason}}",
-			"errors": {
-				"invalidFormat": "请输入完整的服务器地址，例如：https://dav.jianguoyun.com",
-				"unsupportedProtocol": "地址需要以 http:// 或 https:// 开头"
-			}
 		},
 		"sections": {
 			"account": "账号设置",
@@ -100,36 +47,6 @@
 			"defaultModel": {
 				"name": "默认模型",
 				"desc": "新建对话时可选的默认模型"
-			},
-			"nutstoreLlmGateway": {
-				"name": "坚果云 AI（实验性）",
-				"providerName": "坚果云",
-				"desc": "授权后可使用坚果云提供的模型。",
-				"pendingDesc": "请在浏览器中完成授权，当前验证码：{{code}}",
-				"connectedDesc": "已授权，当前 {{count}} 个模型可用。",
-				"authorize": "授权",
-				"authorizing": "授权中...",
-				"openAuthorizationPage": "打开授权页",
-				"cancelAuthorization": "取消授权",
-				"authorized": "坚果云 AI 授权成功",
-				"disconnect": "断开",
-				"disconnected": "已断开坚果云 AI",
-				"refreshModels": "更新",
-				"betaModal": {
-					"title": "功能内测中",
-					"message": "坚果云 AI 目前处于内测阶段，尚未向所有用户开放。如果您不在内测名单中，授权后可能暂时无法使用相关功能，请继续等待，我们正在陆续开放中。",
-					"cancel": "取消",
-					"confirm": "我知道了，继续授权"
-				},
-				"errors": {
-					"authorizationRequired": "请先授权坚果云 AI",
-					"authorizationExpired": "坚果云 AI 授权已过期，请重新发起授权",
-					"authorizationFailed": "坚果云 AI 授权失败：{{code}} {{message}}",
-					"missingClientId": "缺少 LLM_GATEWAY_CLIENT_ID，无法启动坚果云 AI 授权",
-					"modelsFailed": "获取坚果云 AI 模型失败：{{status}}",
-					"emptyModels": "坚果云 AI 没有返回可用模型",
-					"refreshFailed": "刷新坚果云 AI 模型失败"
-				}
 			},
 			"providers": {
 				"name": "模型提供商",
@@ -284,7 +201,6 @@
 				"duplicateModelId": "已存在相同 ID 的模型",
 				"emptyProviderId": "模型提供商名称不能为空",
 				"duplicateProviderId": "已存在相同名称的模型提供商",
-				"reservedProviderId": "该模型提供商名称由坚果云 AI 保留，请使用其他名称",
 				"providerNotFoundForProtocolOpen": "未找到对应的模型提供商，可能已被删除或重命名：{{providerId}}",
 				"networkDisconnected": "网络连接不可用，请检查网络后重试。",
 				"browserCorsFallbackToBuiltinTransport": "浏览器跨域请求失败，已临时回退到内置请求方式。",
@@ -292,12 +208,12 @@
 			}
 		},
 		"confirmBeforeSync": {
-			"name": "同步前确认",
-			"desc": "同步前显示待执行的任务列表，确认后再执行"
+			"name": "显示同步策略确认",
+			"desc": "扫描前允许选择同步策略。手动同步始终显示文件计划，并在写入前要求确认。"
 		},
 		"confirmBeforeDeleteInAutoSync": {
 			"name": "自动同步时删除文件前确认",
-			"desc": "自动同步过程中检测到本地文件将被删除时，弹出确认对话框让你选择删除或重新上传"
+			"desc": "自动同步涉及删除时留待手动审核。冲突以及一次 10 个或更多文件的删除始终需要手动确认。"
 		},
 		"realtimeSync": {
 			"name": "实时同步",
@@ -409,7 +325,7 @@
 		"cache": {
 			"title": "缓存管理",
 			"clearName": "清除本地缓存",
-			"clearDesc": "删除当前设备上的本地缓存数据。此操作无法撤销，会导致下次同步前需要重新建立缓存。仅影响当前设备，不会影响您在坚果云中的数据。",
+			"clearDesc": "删除当前设备上的本地缓存数据。此操作无法撤销，会导致下次同步前需要重新建立缓存。仅影响当前设备，不会影响S3 中的数据。",
 			"clear": "清除",
 			"confirm": "确认清除",
 			"cleared": "缓存已成功清除",
@@ -425,10 +341,6 @@
 				"blobCache": {
 					"name": "文件快照缓存",
 					"desc": "存储用于同步时对比变化的文件快照。"
-				},
-				"traverseWebDAVCache": {
-					"name": "文件扫描缓存",
-					"desc": "存储远程文件夹结构，下次同步时只需获取变化的部分，加快同步速度。如果插件更新后同步出现文件列表异常或数据不一致，可尝试清除此缓存。清除后下次同步需要重新扫描所有远程文件，可能需要较长时间。"
 				},
 				"nothingSelected": "请至少选择一种缓存类型进行清除。"
 			},
@@ -515,12 +427,20 @@
 			"failedToAutoMerge": "自动合并失败",
 			"failedToUploadMerged": "上传合并内容失败",
 			"requestsTooFrequent": "请求过于频繁，请等待几分钟后再试",
-			"accountNotConfigured": "尚未配置坚果云账号，请先在设置中配置账号信息",
-			"ssoTokenInvalid": "登录已失效，请在设置中重新登录。"
+			"accountNotConfigured": "请先配置 S3 Bucket、Region 和访问密钥。"
 		},
 		"requestsTooFrequent": "请求过于频繁，插件将在 {{time}} 后自动继续同步任务",
 		"preparing": "📋 准备同步",
 		"preparation": {
+			"scanningLocal": "正在扫描本地文件…",
+			"checkingCapabilities": "正在检查 S3 写入支持…",
+			"capabilitiesDetail": "正在检查服务是否支持安全写入，需要发送多次请求。",
+			"validating": "正在复核同步前的文件状态…",
+			"validatingDetail": "检查文件自生成计划后是否发生变化。",
+			"recording": "正在复核未变化文件并保存同步记录…",
+			"fileStats": "已处理 {{completed}} / {{total}} 个文件",
+			"analyzingDetail": "正在比对文件内容，可能需要读取新增或变化的 S3 对象。",
+			"stageProgress": "当前阶段进度",
 			"checkingRemote": "正在检查远端目录…",
 			"loadingState": "正在读取同步状态…",
 			"scanningRemote": "正在扫描远端目录…",
@@ -538,7 +458,7 @@
 		"progress": "同步进度: {{percent}}%",
 		"blockedBySync": "同步正在进行中，请稍后再试。",
 		"stoppingGcForSync": "检测到垃圾回收正在进行，正在停止清理并开始同步。",
-		"startButton": "开始同步",
+		"startButton": "启动 JASync",
 		"stopButton": "停止同步",
 		"hideButton": "隐藏",
 		"closeButton": "关闭",
@@ -555,7 +475,7 @@
 		"updatingCache": "正在更新本地缓存...",
 		"failedStatus": "同步失败",
 		"cancelled": "同步已取消",
-		"suggestUseClientForManyTasks": "提示：当同步任务较多时，建议使用坚果云客户端同步，可获得更好的性能和稳定性，插件更适合在移动端使用！",
+		"suggestUseClientForManyTasks": "当前仅预览，不会执行同步任务。",
 		"fileOp": {
 			"createLocalDir": "创建本地目录",
 			"createRemoteDir": "创建远程目录",
@@ -583,19 +503,19 @@
 		"confirmModal": {
 			"title": "同步确认",
 			"policyTitle": "本次同步策略",
-			"policyBasis": "判断基准：将当前本地与云端状态分别和上次同步记录比较。\n没有同步记录时，宽松模式会把同路径、同类型且大小相同的文件视为一致；严格模式按所选策略处理。",
+			"policyBasis": "使用内容哈希与上次成功同步的共同版本进行比较，不会仅凭大小相同判定内容一致。没有共同版本的冲突文件会分别保留。",
 			"policyRecordNote": "“保留”或“跳过”不会标记为已同步，下一次仍会按同步记录重新判断。",
 			"message": "⚠️ 请注意：\n\n1. 同步操作可能会修改或删除本地文件\n2. 建议在同步前手动备份重要文件\n3. 如果出现文件冲突，可能需要手动解决\n4. 首次同步需要处理所有文件，可能会比较慢，请耐心等待\n\n确定要开始同步吗？",
 			"confirm": "确认同步",
 			"cancel": "取消",
-			"remoteDir": "远程目录：{{dir}}",
+			"remoteTarget": "S3 目标：{{target}}",
 			"strategy": "冲突处理策略：{{strategy}}"
 		}
 	},
 	"taskList": {
 		"title": "同步任务列表",
-		"instruction": "请检查以下待执行的任务。点击\"继续\"将执行选中的任务，点击\"取消\"则跳过本次同步。",
-		"continue": "继续（{{count}}）",
+		"instruction": "检查并勾选下面的操作。确认后仅执行所选文件，未勾选文件保持不变。",
+		"continue": "确认并同步（{{count}}）",
 		"cancel": "取消"
 	},
 	"deleteConfirm": {
@@ -841,5 +761,27 @@
 		"labels": {
 			"currentPath": "当前路径"
 		}
+	},
+	"s3": {
+		"previewTitle": "S3 同步计划（只读预览）",
+		"previewNotice": "当前为只读预览版本。仅分析和展示同步计划，不会修改本地文件、S3 对象或同步记录；自动同步暂未开放。",
+		"closePreview": "关闭预览",
+		"credentialsNotice": "连接配置与凭据仅保存在本机 data.local.json 中，不参与同步；该文件未加密。",
+		"pathStyle": "使用路径风格地址（Path style）",
+		"previewComplete": "预览已结束（未执行同步）",
+		"scanning": "正在扫描 S3 对象…",
+		"scanProgress": "已读取 {{pages}} 页，发现 {{items}} 项",
+		"syncNotice": "检查计划并勾选文件后，点击确认执行。覆盖和删除前会在本插件 recovery 目录保存恢复副本。自动同步需手动开启；冲突、受保护的删除和不支持条件写入的操作需要手动确认。",
+		"keepBoth": "保留两份（本地副本：{{path}}）",
+		"protectPlugin": "保留 JASync 插件文件",
+		"manualReviewRequired": "JASync：有变更需要手动审核，请点击启动 JASync 检查并确认。",
+		"deleteTitle": "确认删除文件",
+		"deleteNotice": "本次选中了 {{count}} 项文件删除。删除前会保存恢复副本，仅删除勾选的文件，不递归删除目录。",
+		"confirmDelete": "确认删除所选文件",
+		"compatibilityTitle": "S3 兼容模式",
+		"compatibilityNotice": "此存储服务未通过所需的条件写入或删除检查。JASync 将先备份受影响内容，并在每项操作前重新检查远端版本。\n\n其他客户端若在检查与实际写入或删除之间修改文件，该修改仍可能被覆盖。请暂停其他同步客户端后再继续。恢复副本保存在本插件 recovery 目录。\n\n是否仅为本次同步允许此模式？",
+		"compatibilityConfirm": "使用备份和版本复核继续",
+		"targetChanged": "预览后 S3 设置发生变化，请重新启动 JASync。",
+		"skippedNotice": "JASync 已完成所选操作，另有 {{count}} 项未勾选或已跳过。"
 	}
 }

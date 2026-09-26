@@ -16,10 +16,9 @@ function getByPath(obj: unknown, path: string): unknown {
 }
 
 describe('SETTINGS_TABS', () => {
-	it('should define sync, ai and troubleshooting tabs in order', () => {
+	it('shows sync and troubleshooting tabs while AI settings are hidden', () => {
 		expect(SETTINGS_TABS.map((tab) => tab.key)).toEqual([
 			'sync',
-			'ai',
 			'troubleshooting',
 		])
 	})

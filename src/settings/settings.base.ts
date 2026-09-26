@@ -1,12 +1,12 @@
 import { App } from 'obsidian'
-import { NutstoreSettingTab } from '.'
-import NutstorePlugin from '..'
+import { JASyncSettingTab } from '.'
+import JASyncPlugin from '..'
 
 export default abstract class BaseSettings {
 	constructor(
 		protected app: App,
-		protected plugin: NutstorePlugin,
-		protected settings: NutstoreSettingTab,
+		protected plugin: JASyncPlugin,
+		protected settings: JASyncSettingTab,
 		protected containerEl: HTMLElement,
 	) {}
 

@@ -1,0 +1,84 @@
+# Implementation notes — 2026-09-26
+
+## Delivered scope
+
+JASync 0.2.4 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+
+Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.4 — Continuous sync progress
+
+Previously the coordinator closed its scanning modal unconditionally after planning, then ran capability probes and sequential per-file preflight requests without a window. A no-change plan skipped the file review entirely, leaving a long invisible wait before the transfer UI reappeared. Content comparison and final history verification also lacked file-level progress.
+
+The progress window now stays open through scanning, comparison, preflight, transfer and history verification. It closes only to hand off to an approval dialog, and resumes immediately after approval. Each counted phase shows completed/total files and the current path; unknown-length scanning and capability checks use a visible indeterminate bar. Preparation layouts are compact. Hide remains respected across phases, Stop remains available, automatic runs do not open a window, and old completion timers no longer overwrite active status. An unchanged plan does not announce a transfer phase.
+
+This fixes feedback, not network latency: content hashing, remote reads when a baseline cannot be reused, and sequential validation remain in place. Mutation checks, plan approval, version checks and recovery guarantees are unchanged. Native regressions inspect the window during remote comparison, capability probes, validation and unchanged-file finalization, including Stop and Hide.
+
+## 0.2.3 — JA sync icon
+
+The sync ribbon and start-sync command use a theme-aware JA monogram surrounded by two sync arrows. While syncing, only the arrows rotate and the ribbon uses the theme accent; the letters remain upright. Reduced-motion preferences disable rotation. The stop control and sync behavior are unchanged.
+
+## 0.2.2 — JASync product name
+
+Display branding is now JASync: manifest, English/Chinese ribbon and command labels, notices, errors, log exports, MCP client name and built-in help. Internal plugin/settings/coordinator types and UI classes no longer use Nutstore branding. Source attribution remains in LICENSE/NOTICE and project documentation.
+
+The repository/package name `obsidian-omni-sync`, plugin ID `omni-sync`, plugin/config/cache/recovery paths, database ID, serialized session markers and remote reserved namespace remain unchanged. This is a display/internal-symbol rename, not a new backend identity; it must not reset credentials or deletion/merge history. Newly exported log notes use `jasync/logs/`.
+
+## 0.2.1 — PUT HTTP 304 compatibility fix
+
+A user reported `S3 PUT failed (HTTP 304)`. The 0.2.0 capability check handled 400/409/412/501 but aborted on 304, and compatibility execution still sent unverified condition headers. Protocol regressions reproduce both duplicate-create and initial-create 304 responses.
+
+The fix treats 304 inside probes as unsupported, verifies positive and negative conditions with readback, and removes only unsupported headers after per-run consent. COS official endpoints use the documented native `x-cos-forbid-overwrite` creation header, without `If-None-Match`; detection still rejects support when that native header is ignored (for example with versioning). Actual file PUT 304 responses remain failures: no successful sync record and no unconditional retry. Probe failures now identify the capability being checked.
+
+## Execution contract
+
+- Manual sync always displays the selectable plan; **Confirm and sync** executes selected files. Close, Escape and Cancel decline execution. The optional earlier policy dialog does not replace plan approval.
+- Full listings and SHA-256 content comparisons establish the plan. An incomplete scan is an error. Equal size alone is never proof of equality.
+- Connection identity and file versions are checked again before execution. Every affected local/remote original is backed up and verified before destructive operations. Changed files, failed backups and permissions errors stop the remaining work.
+- The sync history records transferred bytes and the actual upload receipt. Unchecked, skipped and failed operations are not marked synchronized. Already completed files remain complete if a later file fails or the user cancels; this is not a vault-wide transaction.
+- Two Way propagates a deletion only if the surviving copy matches the common baseline; a changed surviving copy is preserved and restored. Send/Receive Only propagate source-side deletions of unchanged tracked files while protecting changes on the receiving side. Override/Revert policies mirror the selected source and may delete untracked destination files.
+- Conflict-free three-way merging requires a verified small UTF-8 common version. Otherwise the local version is saved to a `.conflict-<UUID>` filename and both versions are present on both sides. Priority strategies back up before overwriting.
+- No recursive deletions or independent empty-folder synchronization. Ten or more selected deletions require an additional manual confirmation.
+
+## Service compatibility
+
+After plan approval, random `.omni-sync-internal/probes/<UUID>` objects test whether the service enforces create/overwrite/delete preconditions. These objects are excluded from synchronization and cleanup is attempted. A cleanup failure may leave a small reserved probe object; no user object is used for testing.
+
+If a required condition is ignored or unsupported, manual execution requires a second **per-run** compatibility confirmation. It explains that recovery backups and last-moment version checks cannot prevent a different client from changing an object between the check and the write/delete. Other syncing clients should be paused. Automatic sync never enables this fallback. Permission failures are not treated as unsupported capabilities.
+
+The capability probe and compatibility path support provider differences without claiming all S3-compatible services behave like AWS. The tests below use a protocol fixture, not credentials for AWS, COS, R2 or MinIO.
+
+## Recovery
+
+Recovery is local to the vault under `.obsidian/plugins/omni-sync/recovery/<run UUID>/` (or the configured Obsidian config directory):
+
+- `local/<original path>` contains the local pre-operation bytes.
+- `remote/<original path>` contains the remote pre-operation bytes.
+- `journal/<path hash>.json` describes the path, proposed action, versions, target identity and pending/complete status.
+
+To recover, disable automatic sync, inspect the journal and both versions, then copy the desired content into the vault using its original relative path. Run a new manual plan and review it before updating S3. Copies remain until manually removed; there is no automatic expiry or restore UI in this release. Backups are ordinary unencrypted vault files and should be protected with the vault.
+
+History is stored at `cache/sync-v2-<identity hash>.json`, isolated by vault ID, endpoint, region, bucket, prefix, account ID and addressing mode. No Nutstore history is imported. Corrupt history stops sync and is preserved. An upload with a lost response or failed record save is not blindly retried: retain the recovery journal, inspect both sides and generate a new plan. Never clear history merely to suppress an error, since doing so removes deletion/merge baselines.
+
+Own credentials, settings, cache, recovery, temporary downloads and reserved probes are hard-excluded from syncing, even with user include rules.
+
+## Validation
+
+Development: macOS arm64, Node 24.20.0, pnpm 9.15.9, Obsidian 1.13.7.
+
+- Unit tests cover complete pagination, later-page errors, path/Unicode collisions, prefix isolation, binary/empty/range reads, version changes between chunks, mutation signing/receipts, ignored conditions, no retry on lost write responses, upload/download/delete, all five policies, common-base merges, same-size conflicts, selected operations, backup/save failures, corrupt history, staged-write failures and concurrent local edits.
+- `pnpm run build` includes zero-warning ESLint, TypeScript, esbuild, SWC and packaging into `dist/`.
+- `pnpm run test:obsidian -- --native` uses a separate macOS Obsidian profile and temporary synthetic vault. It loads the built production bundle, renders settings/progress, reloads the plugin and exercises real modal selection, cancellation, transfer, overwrite, tracked deletion, target changes, compatibility confirmation/decline and automatic-mode refusal.
+- Final verification: 66 unit-test files / 818 tests passed; 16 native Obsidian checks passed. ESLint, TypeScript, production packaging and `git diff --check` passed.
+
+The existing Linux sandbox harness is retained. Earlier Linux runs were blocked before plugin startup by official AppImage/Ubuntu package downloads. The macOS harness avoids those bootstrap dependencies. No personal notes or real cloud objects are used by the integration tests.
+
+## Baseline and limits
+
+- Nutstore upstream baseline: `79d35b4e8b47ac43d3531ceb888a722ee942dc5e`. Isolated baseline unit suite: 57 files / 800 tests. The 76 tests for removed Nutstore endpoints are no longer applicable.
+- The upstream model catalog remains its original Git LFS object (`78b42af966d9493385832624db7abf00344899a696fbfe0bad86854a43734256`). Dependencies come from public npm, without `@nutstore/sso-js`.
+- Native HTTP uses 30-second read/delete deadlines and a 120-second upload deadline. Obsidian does not provide an abort handle: cancellation stops later work but cannot revoke a request already sent. Mutations are never automatically retried.
+- Files are buffered in memory. The default size limit is 30 MB; multipart upload, streaming, resumable transfers and historical-version browsing are not implemented.
+- `Vault.process` guards visible small UTF-8 text edits. Binary/hidden/large-text writes use a verified staged copy and final check, but adapter APIs cannot guarantee a cross-platform compare-and-swap against simultaneous external edits. Recovery copies do not eliminate that race.
+- Automatic triggers default off, and upgrading from 0.1.0 disables previously dormant triggers. Conflicts, protected deletion, batches of at least 10 deletions and unsupported conditions require manual review.
+- Cloud-provider and mobile acceptance still require separate live tests. These limits are separate from the now-working manual execution flow.

@@ -1,4 +1,5 @@
-import { NutstoreSync, SyncStartMode } from '~/sync'
+import { SyncStartMode } from '~/sync'
+import { runSafeSync } from '~/sync/safe/runner'
 import { Notice } from 'obsidian'
 import { IN_DEV } from '~/consts'
 import { emitStopGc, emitSyncError } from '~/events'
@@ -10,7 +11,7 @@ import { type SyncPolicy } from '~/settings'
 import logger from '~/utils/logger'
 import waitUntil from '~/utils/wait-until'
 import { BaseService } from './service.interface'
-import type NutstorePlugin from '..'
+import type JASyncPlugin from '..'
 
 export interface SyncOptions {
 	mode: SyncStartMode
@@ -22,7 +23,7 @@ export default class SyncExecutorService extends BaseService {
 	private inFlight = false
 	private pendingAutoSync = false
 
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 	}
 
@@ -82,8 +83,8 @@ export default class SyncExecutorService extends BaseService {
 			logger.info('Sync starting with settings:', {
 				triggerMode: getSyncTriggerLabel(options.mode),
 				syncPolicy: getSyncPolicyLabel(syncPolicy),
-				loginMode: this.plugin.settings.loginMode,
-				remoteBaseDir: this.plugin.remoteBaseDir,
+				s3Bucket: this.plugin.localSettings.s3.bucket,
+				s3Prefix: this.plugin.localSettings.s3.prefix,
 				syncMode: this.plugin.settings.syncMode,
 				realtimeSync: this.plugin.settings.realtimeSync,
 				autoSyncIntervalSeconds: this.plugin.settings.autoSyncIntervalSeconds,
@@ -96,18 +97,13 @@ export default class SyncExecutorService extends BaseService {
 
 			await waitUntil(() => this.plugin.isSyncing === false, 500)
 
-			const sync = new NutstoreSync(this.plugin, {
-				vault: this.plugin.app.vault,
-				token: await this.plugin.getToken(),
-				remoteAccountId: await this.plugin.getRemoteAccountId(),
-				remoteBaseDir: this.plugin.remoteBaseDir,
-				webdav: await this.plugin.webDAVService.createWebDAVClient(),
-			})
-
-			result = await sync.start({
-				mode: options.mode,
+			const session = await this.plugin.createRemoteSession()
+			result = await runSafeSync(
+				this.plugin,
+				session,
 				syncPolicy,
-			})
+				options.mode === SyncStartMode.AUTO_SYNC,
+			)
 
 			return result.ended
 		} catch (error) {
@@ -116,7 +112,7 @@ export default class SyncExecutorService extends BaseService {
 			return false
 		} finally {
 			this.inFlight = false
-			if (result?.ended) {
+			if (result?.ended && result.ranTasks) {
 				if (result.shouldReloadSettings) {
 					this.plugin.settingsService.scheduleReloadSettingsFromDisk()
 				}

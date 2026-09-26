@@ -13,7 +13,7 @@ export default class MkdirRemoteTask extends BaseTask {
 				)
 			}
 			this.logger.info(`[MkdirRemote] ${this.remotePath}`)
-			await this.webdav.createDirectory(this.remotePath, {
+			await this.remoteStorage.createDirectory(this.remotePath, {
 				recursive: true,
 			})
 			return { success: true } as const

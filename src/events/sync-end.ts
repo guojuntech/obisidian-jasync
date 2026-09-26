@@ -1,6 +1,7 @@
 import { Subject } from 'rxjs'
 
 interface SyncEndProps {
+	previewOnly?: boolean
 	showNotice: boolean
 	failedCount: number
 }

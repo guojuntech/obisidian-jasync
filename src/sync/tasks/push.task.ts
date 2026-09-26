@@ -13,13 +13,17 @@ export default class PushTask extends BaseTask {
 			this.logger.info(
 				`[PushTask] ${this.localPath} → ${this.remotePath} (${content.byteLength} bytes)`,
 			)
-			const res = await this.webdav.putFileContents(this.remotePath, content, {
-				overwrite: true,
-			})
-			if (!res) {
+			const res = await this.remoteStorage.putFileContents(
+				this.remotePath,
+				content,
+				{
+					mode: 'overwrite',
+				},
+			)
+			if (!res.success) {
 				throw new Error('Upload failed')
 			}
-			return { success: res }
+			return { success: true } as const
 		} catch (e) {
 			this.logger.error(`[PushTask] failed: ${this.localPath}`, e)
 			return { success: false, error: toTaskError(e, this) }

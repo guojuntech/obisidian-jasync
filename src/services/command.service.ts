@@ -1,5 +1,6 @@
 import { Notice } from 'obsidian'
-import { CHATBOX_AI_ICON_ID } from '~/assets/icons/obsidian-nutstore-ai-icon'
+import { CHATBOX_AI_ICON_ID } from '~/assets/icons/chatbox-ai-icon'
+import { JASYNC_SYNC_ICON_ID } from '~/assets/icons/jasync-sync-icon'
 import SyncConfirmModal from '~/components/SyncConfirmModal'
 import { emitCancelSync } from '~/events'
 import i18n from '~/i18n'
@@ -8,10 +9,10 @@ import { SyncStartMode } from '~/sync'
 import logger from '~/utils/logger'
 import { CHATBOX_VIEW_TYPE } from '~/views/chatbox.view'
 import { BaseService } from './service.interface'
-import NutstorePlugin from '..'
+import JASyncPlugin from '..'
 
 export default class CommandService extends BaseService {
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 	}
 
@@ -19,7 +20,7 @@ export default class CommandService extends BaseService {
 		this.plugin.addCommand({
 			id: 'start-sync',
 			name: i18n.t('sync.startButton'),
-			icon: 'refresh-cw',
+			icon: JASYNC_SYNC_ICON_ID,
 			checkCallback: (checking) => {
 				if (this.plugin.isSyncing) {
 					return false

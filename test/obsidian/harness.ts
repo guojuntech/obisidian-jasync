@@ -5,8 +5,10 @@ import {
 	loadsProductionPlugin,
 	reloadsProductionPlugin,
 	rendersSyncProgress,
+	rendersS3OnlySettings,
 } from './checks/plugin'
 import { createsProviderModels } from './checks/providers'
+import { executesS3Sync } from './checks/s3-sync'
 import {
 	excludesUnrelatedHiddenPathsFromGlobSnapshot,
 	expandsAgentDomainPathsInBash,
@@ -17,15 +19,14 @@ import {
 	skipsStaleVaultSkillEntries,
 } from './checks/vault'
 
-export const OBSIDIAN_E2E_RESULT_PATH =
-	'.obsidian/nutstore-sync-e2e-result.json'
+export const OBSIDIAN_E2E_RESULT_PATH = '.obsidian/omni-sync-e2e-result.json'
 
 interface TestResult {
 	name: string
 	error?: string
 }
 
-export default class NutstoreSyncIntegrationHarness extends Plugin {
+export default class JASyncIntegrationHarness extends Plugin {
 	async onload() {
 		const results: TestResult[] = []
 		await this.app.vault.adapter.write(
@@ -62,6 +63,8 @@ export default class NutstoreSyncIntegrationHarness extends Plugin {
 		await run('loads the production plugin', () =>
 			loadsProductionPlugin(this.app),
 		)
+		await run('renders S3-only settings', () => rendersS3OnlySettings(this.app))
+
 		await run('creates provider models through the real Obsidian runtime', () =>
 			createsProviderModels(),
 		)
@@ -103,6 +106,10 @@ export default class NutstoreSyncIntegrationHarness extends Plugin {
 		await run(
 			'renders sync progress through the loaded production plugin',
 			() => rendersSyncProgress(this.app),
+		)
+		await run(
+			'executes S3 confirmation, selection, transfers, deletion and compatibility safeguards',
+			() => executesS3Sync(this.app),
 		)
 
 		await this.app.vault.adapter.write(

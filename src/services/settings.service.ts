@@ -1,3 +1,5 @@
+import { DEFAULT_S3_SETTINGS } from '~/remote-storage/s3/settings'
+import { stripRemovedIntegrations } from '~/settings/strip-removed-integrations'
 import { debounce } from 'lodash-es'
 import { normalizePath, Notice } from 'obsidian'
 import {
@@ -12,14 +14,14 @@ import i18n from '~/i18n'
 import {
 	DEFAULT_LOCAL_SETTINGS,
 	DEFAULT_SETTINGS,
-	type NutstoreLocalSettings,
-	type NutstoreSettings,
+	type JASyncLocalSettings,
+	type JASyncSettings,
 } from '~/settings'
 import { ConflictStrategy } from '~/sync/tasks/conflict-resolve.task'
 import { DEFAULT_MOBILE_APP_DOWNLOAD_FILE_CHUNK_SIZE } from '~/utils/download-chunk-size'
 import { migrateLegacyFilterRules } from '~/utils/glob-match'
 import logger from '~/utils/logger'
-import type NutstorePlugin from '..'
+import type JASyncPlugin from '..'
 import { BaseService } from './service.interface'
 
 export default class SettingsService extends BaseService {
@@ -28,7 +30,7 @@ export default class SettingsService extends BaseService {
 		void this.reloadSettingsFromDisk()
 	}, 500)
 
-	constructor(private plugin: NutstorePlugin) {
+	constructor(private plugin: JASyncPlugin) {
 		super()
 	}
 
@@ -36,7 +38,6 @@ export default class SettingsService extends BaseService {
 		await this.loadSettings()
 		await this.loadLocalSettings()
 		this.plugin.modelsPresetService.initializeFromLocalSettings()
-		await this.plugin.nutstoreLlmGatewayService.initializeProviderFromStoredAuth()
 	}
 
 	override onunload() {
@@ -47,7 +48,9 @@ export default class SettingsService extends BaseService {
 		const loadedSettings = (await this.plugin.loadData()) as unknown
 		const storedSettings =
 			loadedSettings && typeof loadedSettings === 'object'
-				? (loadedSettings as Partial<NutstoreSettings>)
+				? (stripRemovedIntegrations(
+						loadedSettings,
+					) as Partial<JASyncSettings>)
 				: {}
 		this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings)
 		if (
@@ -90,7 +93,6 @@ export default class SettingsService extends BaseService {
 		this.plugin.settings.ai.subagents.memory ??= { enabled: false }
 		this.plugin.settings.ai.subagents.explorer.enabled ??= false
 		this.plugin.settings.ai.subagents.memory.enabled ??= false
-		this.plugin.settings.ai.nutstoreLlmGateway ??= {}
 		if (Array.isArray(this.plugin.settings.ai.providers)) {
 			this.plugin.settings.ai.providers = {}
 		}
@@ -144,7 +146,10 @@ export default class SettingsService extends BaseService {
 	async loadLocalSettings() {
 		const path = normalizePath(`${this.plugin.manifest.dir}/data.local.json`)
 		if (!(await this.plugin.app.vault.adapter.exists(path))) {
-			this.plugin.localSettings = { ...DEFAULT_LOCAL_SETTINGS }
+			this.plugin.localSettings = structuredClone(DEFAULT_LOCAL_SETTINGS)
+			this.plugin.localSettings.vaultId = crypto.randomUUID()
+			this.plugin.localSettings.executionVersion = 1
+			await this.saveLocalSettings()
 			return
 		}
 		try {
@@ -153,10 +158,30 @@ export default class SettingsService extends BaseService {
 				{},
 				DEFAULT_LOCAL_SETTINGS,
 				JSON.parse(raw),
-			) as NutstoreLocalSettings
+			) as JASyncLocalSettings
 			this.plugin.localSettings.ai ??= {}
 		} catch {
-			this.plugin.localSettings = { ...DEFAULT_LOCAL_SETTINGS }
+			throw new Error(
+				'Cannot read JASync local settings. The existing file has been preserved.',
+			)
+		}
+		this.plugin.localSettings.s3 = {
+			...DEFAULT_S3_SETTINGS,
+			...this.plugin.localSettings.s3,
+		}
+		if (this.plugin.localSettings.executionVersion !== 1) {
+			// Preview builds shipped an inactive 5-minute timer. Upgrading must
+			// never turn that dormant default into unattended file writes.
+			this.plugin.settings.realtimeSync = false
+			this.plugin.settings.autoSyncIntervalSeconds = 0
+			this.plugin.settings.startupSyncDelaySeconds = 0
+			this.plugin.localSettings.executionVersion = 1
+			await this.plugin.saveData(this.plugin.settings)
+			await this.saveLocalSettings()
+		}
+		if (!this.plugin.localSettings.vaultId) {
+			this.plugin.localSettings.vaultId = crypto.randomUUID()
+			await this.saveLocalSettings()
 		}
 	}
 
@@ -181,7 +206,6 @@ export default class SettingsService extends BaseService {
 			await this.loadSettings()
 			await this.loadLocalSettings()
 			this.plugin.modelsPresetService.initializeFromLocalSettings()
-			await this.plugin.nutstoreLlmGatewayService.initializeProviderFromStoredAuth()
 			await this.plugin.i18nService.update()
 			await this.plugin.chatService.handleSettingsChanged()
 			await this.plugin.aiConflictResolverService.refresh()

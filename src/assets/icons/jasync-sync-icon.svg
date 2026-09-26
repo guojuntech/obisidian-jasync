@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+	<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+		<g class="jasync-sync-icon__arrows" stroke-width="6">
+			<path d="M 12 36 A 40 40 0 0 1 85 29 M 83 16 L 85 29 L 72 27" />
+			<path d="M 88 64 A 40 40 0 0 1 15 71 M 17 84 L 15 71 L 28 73" />
+		</g>
+		<g class="jasync-sync-icon__letters" stroke-width="7">
+			<path d="M 25 32 H 44 V 57 C 44 72 25 72 25 59" />
+			<path d="M 53 68 L 64 32 L 76 68 M 57 56 H 72" />
+		</g>
+	</g>
+</svg>
