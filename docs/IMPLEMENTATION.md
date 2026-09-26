@@ -2,9 +2,21 @@
 
 ## Delivered scope
 
-JASync 0.2.6 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.7 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.7 — Android module loading
+
+Android / Obsidian 1.13.8 reported `Buffer is not defined` in `_seedDefaults` while enabling 0.2.6. The S3 implementation introduced `fast-xml-validator`, whose barrel import pulled in `detailed-xml-validator` and `@nodable/flexible-xml-parser`. The latter eagerly creates an encoding registry with global `Buffer.from()`. This dependency chain is absent from the Nutstore baseline. Node and Electron supplied Buffer, masking the regression in earlier tests.
+
+The old production bundle reproduced the same stack in a separate JavaScript realm without Node globals. The fix removes that dependency chain and uses the existing fast-xml-parser XMLValidator, explicitly checking for a true result. DOCTYPE rejection, malformed-listing failures, complete pagination and all mutation protections remain. ESLint allows this specific deprecated symbol in the S3 adapter because the recommended replacement is the source of the mobile failure; future upgrades must retain browser compatibility and validation.
+
+New unit coverage bundles the S3 implementation for a realm without Buffer/process/require, signs and parses a Unicode listing, and rejects a malformed later page. The native harness also evaluates the exact production main.js in an independent browser iframe without Node globals, supplying only Obsidian and CodeMirror host modules. This checks module evaluation, not the Android lifecycle or actual device/cloud synchronization. No global Buffer polyfill is installed.
+
+Upgrading an existing jasync installation from 0.2.6 preserves its settings, cache and recovery; only plugin release files are replaced.
+
+Validation: 67 unit-test files / 834 tests and 17 native Obsidian checks passed, including the independent browser evaluation of the final 0.2.7 bundle. ESLint, TypeScript, production build and ZIP content comparison passed. The archive contains exactly five release files matching dist, without credentials or sync state. Android device confirmation remains outstanding.
 
 ## 0.2.6 — Unified JASync identity
 

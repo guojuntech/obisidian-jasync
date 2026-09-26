@@ -110,6 +110,9 @@ describe('S3 scanning and signing', () => {
 
 	it.each([
 		'<ListBucketResult><IsTruncated>false</IsTruncated>',
+		'<ListBucketResult><EncodingType>url</EncodingType><IsTruncated>false</IsTruncated></WrongRoot>',
+		'<ListBucketResult broken="unterminated><EncodingType>url</EncodingType><IsTruncated>false</IsTruncated></ListBucketResult>',
+		'<!DOCTYPE ListBucketResult [<!ENTITY key "note.md">]><ListBucketResult><EncodingType>url</EncodingType><IsTruncated>false</IsTruncated></ListBucketResult>',
 		'<ListBucketResult><EncodingType>url</EncodingType><IsTruncated>true</IsTruncated></ListBucketResult>',
 		'<ListBucketResult></ListBucketResult>',
 	])('rejects malformed or incomplete listing: %s', async (body) => {

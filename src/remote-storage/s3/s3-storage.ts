@@ -1,6 +1,5 @@
 import { AwsClient } from 'aws4fetch'
-import { XMLParser } from 'fast-xml-parser'
-import { SyntaxValidator } from 'fast-xml-validator'
+import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { LEGACY_PLUGIN_ID } from '~/legacy-identity'
 import { RemoteStorageError } from '../errors'
 import type { RemoteScanOptions } from '../remote-scanner.interface'
@@ -568,7 +567,10 @@ export class S3RemoteStorage extends RemoteStorage {
 		const text = new TextDecoder().decode(response.body)
 		try {
 			if (/<!DOCTYPE/i.test(text)) throw new Error('Unexpected DOCTYPE')
-			SyntaxValidator.validate(text)
+			// The parser already includes a browser-safe syntax validator. The
+			// separate fast-xml-validator package pulls in Node-only startup code.
+			if (XMLValidator.validate(text) !== true)
+				throw new Error('Malformed XML')
 		} catch {
 			throw new RemoteStorageError('invalid-response', 'Invalid S3 listing XML')
 		}

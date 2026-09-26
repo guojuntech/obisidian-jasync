@@ -1,6 +1,6 @@
 # JASync 设计与实现状态
 
-更新时间：2026-09-27。本文对应 **JASync 0.2.6**，记录已实现行为与剩余边界。产品为 Obsidian 的 S3 同步插件，开发目录与包名为 `obsidian-jasync`；当前 GitHub 远端为 `guojuntech/obisidian-jasync`，沿用现有仓库名。
+更新时间：2026-09-27。本文对应 **JASync 0.2.7**，记录已实现行为与剩余边界。产品为 Obsidian 的 S3 同步插件，开发目录与包名为 `obsidian-jasync`；当前 GitHub 远端为 `guojuntech/obisidian-jasync`，沿用现有仓库名。
 
 ## 1. 当前决策
 
@@ -31,7 +31,7 @@
 | P3   | 安全执行、条件写删、复核、恢复与精确记录                | 已实现；手动确认后按文件执行，失败即停止                      |
 | P4   | 移动端、兼容服务、性能与发布验收                        | 待完成，不声明所有兼容 S3 服务均已验证                        |
 
-**当前 0.2.6 已开放同步执行。** 手动同步在存在待审核项目时显示可勾选计划，确认后执行；关闭或取消计划不会写入。全部文件一致且已有匹配的共同基准时，扫描比对后直接完成；仅首次建立或需要更新的共同基准继续校验并保存记录。自动同步默认关闭，并对冲突、批量删除及不支持条件写入的服务保留手动审核。
+**当前 0.2.7 已开放同步执行。** 手动同步在存在待审核项目时显示可勾选计划，确认后执行；关闭或取消计划不会写入。全部文件一致且已有匹配的共同基准时，扫描比对后直接完成；仅首次建立或需要更新的共同基准继续校验并保存记录。自动同步默认关闭，并对冲突、批量删除及不支持条件写入的服务保留手动审核。
 
 ## 3. 架构与注入
 
@@ -221,6 +221,14 @@ flowchart TD
 
 ### 验证与打包
 
+0.2.7 修复用户在 Android / Obsidian 1.13.8 启用 0.2.6 时报告的 `Buffer is not defined`。根因是 S3 功能新增的 `fast-xml-validator` 经 `detailed-xml-validator` 引入 `@nodable/flexible-xml-parser`，后者在模块初始化时调用 `Buffer.from()`；这条依赖链不属于 Nutstore 原始基线。桌面运行时提供 Buffer，原有 Node/桌面测试因此漏检。
+
+修复移除这条依赖链，复用 `fast-xml-parser` 5.11.0 内置 XMLValidator；只有返回 true 才接受语法，DOCTYPE、分页完整性与结构校验继续保留。不向全局注入 Buffer。内置校验 API 已被上游标记 deprecated，此处有明确的移动端兼容例外；后续升级必须继续通过浏览器环境的验证，不能直接换回未通过验证的替代包。
+
+新增无 Buffer/process/require 的独立 JS 环境测试 S3 加载、签名、Unicode 列表及损坏的后续分页；原生集成检查另在独立浏览器 iframe 中执行最终生产 main.js，只提供 Obsidian 和 CodeMirror 模块。完整包检查覆盖模块求值，不代表 Android 全生命周期或真实云同步已通过实机验收。
+
+0.2.7 验证结果为 67 个单元测试文件 / 834 项测试、17 项原生 Obsidian 检查通过；ESLint、TypeScript、生产构建及 ZIP 五文件与 dist 的逐字节核对通过。
+
 详见 [实施记录](docs/IMPLEMENTATION.md)。上游基线与本次变更分别记录；模拟协议测试不代替真实 S3 和移动端测试。
 
 重点覆盖：分页完整性、路径冲突、前缀边界、条件写删探测、固定版本分块、真实共同基准、勾选/取消、并发编辑、备份失败、状态保存失败及真实 Obsidian Vault 写入。0.2.6 新增回归验证旧私有状态、两代临时下载及探测对象始终被排除，用户 include 规则不能绕过。原生测试使用新插件 ID 和样式选择器验证加载、设置、进度与同步交互。具体执行结果记录在实施记录中。
@@ -233,7 +241,7 @@ flowchart TD
 
 ### GitHub Release 与 BRAT 分发
 
-发布入口是与 manifest 版本一致的 Tag，例如 `0.2.6`。工作流先验证插件 ID、三处版本信息及对应 `docs/releases/<version>.md`，使用 pnpm 9.15.9 和冻结锁文件安装依赖，运行单元测试、ESLint、TypeScript 和生产构建。发布时不更新外部模型目录，产物来自该 Tag 的源文件。
+发布入口是与 manifest 版本一致的 Tag，例如 `0.2.7`。工作流先验证插件 ID、三处版本信息及对应 `docs/releases/<version>.md`，使用 pnpm 9.15.9 和冻结锁文件安装依赖，运行单元测试、ESLint、TypeScript 和生产构建。发布时不更新外部模型目录，产物来自该 Tag 的源文件。
 
 工作流核对 ZIP 仅包含五个允许文件，且内容与独立附件逐字节相同，再生成 SHA-256 清单并创建已发布的 Release。BRAT 使用单独的 `main.js`、`manifest.json`、`styles.css` 附件；ZIP 用于手动安装，LICENSE、NOTICE.md 与 SHA256SUMS 一同发布。不将配置、凭据或同步状态作为附件。
 

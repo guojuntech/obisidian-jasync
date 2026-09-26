@@ -2,6 +2,7 @@ import { Plugin } from 'obsidian'
 import { persistsChatSessions, toleratesCorruptChatMeta } from './checks/chat'
 import {
 	detachesChatboxWhenProductionPluginIsDisabled,
+	evaluatesProductionBundleWithoutNode,
 	loadsProductionPlugin,
 	reloadsProductionPlugin,
 	rendersSyncProgress,
@@ -62,6 +63,9 @@ export default class JASyncIntegrationHarness extends Plugin {
 
 		await run('loads the production plugin', () =>
 			loadsProductionPlugin(this.app),
+		)
+		await run('evaluates the production bundle without Node globals', () =>
+			evaluatesProductionBundleWithoutNode(this.app),
 		)
 		await run('renders S3-only settings', () => rendersS3OnlySettings(this.app))
 

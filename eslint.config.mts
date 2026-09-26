@@ -210,6 +210,26 @@ export default defineConfig([
 	},
 
 	{
+		files: ['src/remote-storage/s3/s3-storage.ts'],
+		rules: {
+			// Its replacement adds a Node-only import-time dependency. Keep the
+			// browser validator until a replacement passes the mobile regressions.
+			'@typescript-eslint/no-deprecated': [
+				'warn',
+				{
+					allow: [
+						{
+							from: 'package',
+							name: 'XMLValidator',
+							package: 'fast-xml-parser',
+						},
+					],
+				},
+			],
+		},
+	},
+
+	{
 		files: ['src/ai/chat/messages/ui-message.ts'],
 		rules: {
 			// Reads the deprecated field solely to migrate persisted legacy sessions.

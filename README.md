@@ -4,7 +4,7 @@ Just another S3 sync plugin for Obsidian. 仓库名为 `obsidian-jasync`；插�
 
 基于 Obsidian Nutstore Sync 的同步交互，使用 Alipan RemoteStorage 抽象方式开发的 **S3-only** 插件。
 
-**当前为 0.2.6，可执行完整 S3 同步。** 扫描后展示计划，点击「确认并同步」执行勾选的上传、下载、覆盖、删除和冲突处理；取消或关闭计划不会执行。Prefix 直接在输入框中设置。
+**当前为 0.2.7，可执行完整 S3 同步。** 扫描后展示计划，点击「确认并同步」执行勾选的上传、下载、覆盖、删除和冲突处理；取消或关闭计划不会执行。Prefix 直接在输入框中设置。
 
 已移除坚果云 SSO、WebDAV、增量接口、远端缓存和 AI 网关。通用 AI/MCP 代码仍保留，当前隐藏 AI 设置页和左侧 ChatBox 按钮。
 
@@ -25,6 +25,8 @@ corepack pnpm@9.15.9 run build
 构建会将最终的 `main.js`、`manifest.json`、`styles.css` 及许可说明整理到 `dist/`，并生成以 `jasync/` 为顶层目录的 `jasync-<version>.zip`。将安装包解压到隔离测试 vault 的 `.obsidian/plugins/`。项目根目录仍保留构建产物，供现有集成测试和发布工作流使用。
 
 ## 安装与升级
+
+0.2.7 修复 0.2.6 在 Android 启用时的 `Buffer is not defined` 错误。已有 `jasync` 安装覆盖插件文件即可，保留本设备的配置、cache 和 recovery；已增加无 Node 全局对象的加载检查，手机端完整同步仍待实机确认。
 
 通过 BRAT 安装时添加仓库 `guojuntech/obisidian-jasync`，选择已发布版本并启用 JASync。Release 单独提供 `main.js`、`manifest.json`、`styles.css`，同时提供手动安装 ZIP 和 SHA-256 校验文件。Android / iOS 仍需实机验证。
 
