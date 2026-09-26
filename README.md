@@ -26,11 +26,15 @@ corepack pnpm@9.15.9 run build
 
 ## 安装与升级
 
+通过 BRAT 安装时添加仓库 `guojuntech/obisidian-jasync`，选择已发布版本并启用 JASync。Release 单独提供 `main.js`、`manifest.json`、`styles.css`，同时提供手动安装 ZIP 和 SHA-256 校验文件。Android / iOS 仍需实机验证。
+
 新设备将 `dist/` 的插件文件放到 `.obsidian/plugins/jasync/`，启用 **JASync** 后独立填写 S3 配置。不要复制其他设备的 `data.local.json`、缓存或恢复目录。
 
 0.2.6 使用全新插件身份，不迁移旧版配置、缓存或同步记录。卸载旧插件并清理其本地状态后安装 `jasync`，重新填写 S3 配置。自动同步默认关闭，首次同步需重新建立基准并检查计划；清理本地插件不会删除 S3 对象或笔记正文。
 
 旧名称仅保留在私有文件排除规则中，避免远端遗留的旧探测对象或旧设备的私有配置进入同步。
+
+发布时将版本同步到 package.json、manifest.json 与 versions.json，并添加 `docs/releases/<version>.md`。推送同名版本 Tag 后，GitHub Actions 使用锁定依赖运行测试和构建，校验安装包并发布 Release；普通分支 push 不发布版本。
 
 ## 使用 S3 同步
 

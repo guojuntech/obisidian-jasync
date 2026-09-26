@@ -231,6 +231,16 @@ flowchart TD
 
 旧 ID 切换遵循上文的全新安装方案。此后同一 `jasync` 安装的常规版本更新只替换插件产物，保留该设备的 `data.json`、`data.local.json`、cache 和 recovery；重新启用插件或重启 Obsidian 后加载新代码。Git 提交和 push 只发布源码，不等同于发布 GitHub Release 或上传安装包。
 
+### GitHub Release 与 BRAT 分发
+
+发布入口是与 manifest 版本一致的 Tag，例如 `0.2.6`。工作流先验证插件 ID、三处版本信息及对应 `docs/releases/<version>.md`，使用 pnpm 9.15.9 和冻结锁文件安装依赖，运行单元测试、ESLint、TypeScript 和生产构建。发布时不更新外部模型目录，产物来自该 Tag 的源文件。
+
+工作流核对 ZIP 仅包含五个允许文件，且内容与独立附件逐字节相同，再生成 SHA-256 清单并创建已发布的 Release。BRAT 使用单独的 `main.js`、`manifest.json`、`styles.css` 附件；ZIP 用于手动安装，LICENSE、NOTICE.md 与 SHA256SUMS 一同发布。不将配置、凭据或同步状态作为附件。
+
+发行说明以 Tag 中的版本文档为准，移除上游依赖 Gemini 的自动 changelog 和覆盖 Release 描述的工作流，避免发布时额外修改分支或替换已审核的说明。
+
+工作流按 Tag 串行执行，不取消正在发布的相同 Tag。已发布版本不自动覆盖，后续修改使用新版本及新 Tag。Android 用户可经 BRAT 下载同一插件包，但移动端实机验证仍属于后续验收。
+
 ### 后续维护
 
 剩余验收包括真实 AWS / COS / 其他兼容服务与移动端。后续性能优化可评估有界并发与本地内容读取优化，但必须保留完整扫描、版本固定、明确批准、取消和恢复约束；当前不承诺这些优化已实现。

@@ -5,6 +5,10 @@ on:
     tags:
       - '*'
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,35 +28,64 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: latest-9
+          version: 9.15.9
+
+      - name: Validate release version
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          const read = (path) => JSON.parse(readFileSync(path, 'utf8'))
+          const manifest = read('manifest.json')
+          const pkg = read('package.json')
+          const versions = read('versions.json')
+          const tag = process.env.GITHUB_REF_NAME
+          if (manifest.id !== 'jasync' || manifest.version !== tag || pkg.version !== tag || versions[tag] !== manifest.minAppVersion) {
+            throw new Error('Release tag, plugin identity and version files must agree')
+          }
+          readFileSync(`docs/releases/${tag}.md`, 'utf8')
+          NODE
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Update models API catalog
-        run: pnpm run update:models-api
-        continue-on-error: true
+      - name: Run unit tests
+        run: pnpm run test:unit
 
       - name: Build plugin
         env:
           NODE_ENV: production
         run: pnpm run build
 
-      - name: Package plugin
+      - name: Verify installation archive
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
-          zip ${{ github.event.repository.name }}-${tag}.zip main.js manifest.json styles.css
-          tar -czf ${{ github.event.repository.name }}-${tag}.tar.gz main.js manifest.json styles.css
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          import { unzipSync } from 'fflate'
+          const manifest = JSON.parse(readFileSync('dist/manifest.json', 'utf8'))
+          const archive = unzipSync(readFileSync(`dist/jasync-${manifest.version}.zip`))
+          const files = ['main.js', 'manifest.json', 'styles.css', 'LICENSE', 'NOTICE.md']
+          if (Object.keys(archive).length !== files.length) throw new Error('Unexpected archive contents')
+          for (const file of files) {
+            const data = archive[`jasync/${file}`]
+            if (!data || !Buffer.from(data).equals(readFileSync(`dist/${file}`))) {
+              throw new Error(`Archive does not match release asset: ${file}`)
+            }
+          }
+          NODE
 
-      - name: Create release
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum main.js manifest.json styles.css LICENSE NOTICE.md "jasync-${GITHUB_REF_NAME}.zip" > SHA256SUMS
+
+      - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
-
+          tag="$GITHUB_REF_NAME"
           gh release create "$tag" \
+            --verify-tag \
             --title="$tag" \
-            --draft \
-            main.js manifest.json styles.css \
-            ${{ github.event.repository.name }}-${tag}.zip \
-            ${{ github.event.repository.name }}-${tag}.tar.gz
+            --notes-file="docs/releases/${tag}.md" \
+            dist/main.js dist/manifest.json dist/styles.css \
+            "dist/jasync-${tag}.zip" \
+            dist/LICENSE dist/NOTICE.md dist/SHA256SUMS
