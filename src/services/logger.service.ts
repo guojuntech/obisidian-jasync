@@ -11,8 +11,11 @@ export interface LogEntry {
 	args: unknown[]
 }
 
+export const MAX_LOG_ENTRIES = 2000
+
 export default class LoggerService extends BaseService {
 	logs: LogEntry[] = []
+	droppedLogCount = 0
 
 	constructor(plugin: JASyncPlugin) {
 		super()
@@ -27,6 +30,11 @@ export default class LoggerService extends BaseService {
 					level: logObj.type,
 					args: logObj.args,
 				})
+				if (this.logs.length > MAX_LOG_ENTRIES) {
+					const count = this.logs.length - MAX_LOG_ENTRIES
+					this.logs.splice(0, count)
+					this.droppedLogCount += count
+				}
 			},
 		}
 		if (IN_DEV) {
@@ -39,5 +47,6 @@ export default class LoggerService extends BaseService {
 
 	clear() {
 		this.logs = []
+		this.droppedLogCount = 0
 	}
 }

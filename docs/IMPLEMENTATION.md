@@ -1,10 +1,18 @@
-# Implementation notes — 2026-09-27
+# Implementation notes — 2026-09-28
 
 ## Delivered scope
 
-JASync 0.2.7 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.8 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.8 — Exportable S3 diagnostics
+
+Android deletion capability failures previously discarded the native exception and displayed only a generic network error. Request failures now include the HTTP method, capability/step and diagnostic ID. Probe start/response events record elapsed time, attempt, HTTP status, token-shaped service Code and request ID. Native failures record bounded, redacted name/message/code, separately labelled reportedStatus, timeout information and up to three causes. A native exception carrying 404/412 remains a failure; it cannot silently satisfy a probe or enable compatibility mode. Cleanup failures are logged without replacing the primary error. Mutation retries, confirmations and conditional protections are unchanged.
+
+Diagnostic fields do not retain request headers, full URLs, bodies or raw exceptions. Configured credentials and their URL-encoded forms are redacted before truncation. Logs are bounded to the latest 2000 entries. Troubleshoot exports include platform, Obsidian API version and discarded-entry count, and explain exporting before restart. The production-bundle integration check injects a native HEAD failure after conditional deletion and exports the resulting redacted log note through the actual troubleshooting implementation. This is a diagnostic release, not a verified Android network fix.
+
+Validation: 69 unit-test files / 844 tests and 18 native Obsidian checks passed, including production log-note export and browser execution without Node globals. ESLint, TypeScript, production build and the five-file ZIP comparison passed. Android device confirmation remains outstanding.
 
 ## 0.2.7 — Android module loading
 

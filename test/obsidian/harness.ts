@@ -10,6 +10,7 @@ import {
 } from './checks/plugin'
 import { createsProviderModels } from './checks/providers'
 import { executesS3Sync } from './checks/s3-sync'
+import { exportsS3Diagnostics } from './checks/s3-diagnostics'
 import {
 	excludesUnrelatedHiddenPathsFromGlobSnapshot,
 	expandsAgentDomainPathsInBash,
@@ -114,6 +115,10 @@ export default class JASyncIntegrationHarness extends Plugin {
 		await run(
 			'executes S3 confirmation, selection, transfers, deletion and compatibility safeguards',
 			() => executesS3Sync(this.app),
+		)
+		await run(
+			'exports redacted S3 failure details from the production plugin',
+			() => exportsS3Diagnostics(this.app),
 		)
 
 		await this.app.vault.adapter.write(

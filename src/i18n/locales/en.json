@@ -310,7 +310,7 @@
 		"log": {
 			"title": "Debug logs",
 			"name": "Console logs",
-			"desc": "View console output and debug information",
+			"desc": "Save logs after a sync error, before restarting or disabling the plugin. Includes S3 probe steps, HTTP status, service error codes, request IDs and redacted native errors. Keeps the latest 2000 entries.",
 			"saveToNote": "Save to note",
 			"savedToNote": "Logs saved to note: {{fileName}}",
 			"saveError": "Failed to save logs",

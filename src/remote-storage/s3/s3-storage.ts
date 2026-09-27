@@ -1,6 +1,7 @@
 import { AwsClient } from 'aws4fetch'
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { LEGACY_PLUGIN_ID } from '~/legacy-identity'
+import logger from '~/utils/logger'
 import { RemoteStorageError } from '../errors'
 import type { RemoteScanOptions } from '../remote-scanner.interface'
 import RemoteStorage, {
@@ -21,6 +22,11 @@ import {
 	type S3Settings,
 } from './settings'
 import type { S3HttpResponse, S3Transport } from './transport'
+import {
+	describeS3Exception,
+	describeS3Response,
+	type S3ProbeContext,
+} from './diagnostics'
 
 const xml = new XMLParser({
 	parseTagValue: false,
@@ -402,9 +408,7 @@ export class S3RemoteStorage extends RemoteStorage {
 		if (this.mutationSupport) return this.mutationSupport
 		const probeRoot = `${this.settings.prefix}.jasync-internal/probes/${crypto.randomUUID()}`
 		const first = new TextEncoder().encode('JASync capability probe A').buffer
-		const second = new TextEncoder().encode(
-			'JASync capability probe B',
-		).buffer
+		const second = new TextEncoder().encode('JASync capability probe B').buffer
 		// A 304 is never a completed mutation or sufficient proof of safe
 		// conditional writes. Classify it as unsupported only inside probes.
 		const attempt = async (operation: () => Promise<S3HttpResponse>) => {
@@ -428,9 +432,21 @@ export class S3RemoteStorage extends RemoteStorage {
 				)
 			return value
 		}
-		const matches = async (url: URL, data: ArrayBuffer, version: string) => {
+		const matches = async (
+			url: URL,
+			data: ArrayBuffer,
+			version: string,
+			context: S3ProbeContext,
+		) => {
 			try {
-				const response = await this.request('GET', url)
+				const response = await this.request(
+					'GET',
+					url,
+					{},
+					{},
+					undefined,
+					context,
+				)
 				return (
 					etag(response) === version &&
 					response.body.byteLength === data.byteLength &&
@@ -446,52 +462,72 @@ export class S3RemoteStorage extends RemoteStorage {
 		}
 		const probe = async (kind: keyof MutationSupport): Promise<boolean> => {
 			const url = this.objectUrl(`${probeRoot}/${kind}`)
+			const request = (
+				step: S3ProbeContext['step'],
+				method: 'PUT' | 'DELETE' | 'HEAD',
+				headers: Record<string, string> = {},
+				body?: ArrayBuffer,
+			) =>
+				this.request(method, url, headers, {}, body, { capability: kind, step })
 			try {
 				// The first conditional PUT is itself the positive create test.
 				let seed = await attempt(() =>
-					this.request('PUT', url, this.createConditionHeaders(), {}, first),
+					request('seed', 'PUT', this.createConditionHeaders(), first),
 				)
 				if (typeof seed === 'number') {
 					if (kind === 'create') return false
 					// Only our random probe object can be seeded unconditionally.
 					// A real user-file write is never retried without its condition.
 					if (![304, 400, 501].includes(seed)) return false
-					seed = await this.request('PUT', url, {}, {}, first)
+					seed = await request('seed-fallback', 'PUT', {}, first)
 				}
 				const version = etag(seed)
-				if (!(await matches(url, first, version))) return false
+				if (
+					!(await matches(url, first, version, {
+						capability: kind,
+						step: 'verify-seed',
+					}))
+				)
+					return false
 				const condition =
 					kind === 'create'
 						? this.createConditionHeaders()
 						: { 'If-Match': '"jasync-impossible-etag"' }
 				const negative = await attempt(() =>
-					this.request(
+					request(
+						'reject-mismatch',
 						kind === 'delete' ? 'DELETE' : 'PUT',
-						url,
 						condition,
-						{},
 						kind === 'delete' ? undefined : second,
 					),
 				)
 				if (negative !== 409 && negative !== 412) return false
-				if (!(await matches(url, first, version))) return false
+				if (
+					!(await matches(url, first, version, {
+						capability: kind,
+						step: 'verify-rejected',
+					}))
+				)
+					return false
 				if (kind === 'create') return true
 				// Rejection alone does not prove support: matching conditions must
 				// also work, and the resulting bytes/absence must match the receipt.
 				const positive = await attempt(() =>
-					this.request(
+					request(
+						'accept-match',
 						kind === 'delete' ? 'DELETE' : 'PUT',
-						url,
 						{ 'If-Match': version },
-						{},
 						kind === 'delete' ? undefined : second,
 					),
 				)
 				if (typeof positive === 'number') return false
 				if (kind === 'overwrite')
-					return await matches(url, second, etag(positive))
+					return await matches(url, second, etag(positive), {
+						capability: kind,
+						step: 'verify-overwrite',
+					})
 				try {
-					await this.request('HEAD', url)
+					await request('verify-deleted', 'HEAD')
 					return false
 				} catch (error) {
 					if (error instanceof RemoteStorageError && error.code === 'not-found')
@@ -508,13 +544,19 @@ export class S3RemoteStorage extends RemoteStorage {
 					)
 				throw error
 			} finally {
-				await this.request('DELETE', url).catch(() => {})
+				await request('cleanup', 'DELETE').catch(() => {
+					logger.warn(
+						'[S3] probe cleanup failed; a reserved test object may remain',
+						{ capability: kind },
+					)
+				})
 			}
 		}
 		const create = await probe('create')
 		const overwrite = await probe('overwrite')
 		const deletion = await probe('delete')
 		this.mutationSupport = { create, overwrite, delete: deletion }
+		logger.info('[S3] mutation capabilities', this.mutationSupport)
 		return this.mutationSupport
 	}
 
@@ -569,8 +611,7 @@ export class S3RemoteStorage extends RemoteStorage {
 			if (/<!DOCTYPE/i.test(text)) throw new Error('Unexpected DOCTYPE')
 			// The parser already includes a browser-safe syntax validator. The
 			// separate fast-xml-validator package pulls in Node-only startup code.
-			if (XMLValidator.validate(text) !== true)
-				throw new Error('Malformed XML')
+			if (XMLValidator.validate(text) !== true) throw new Error('Malformed XML')
 		} catch {
 			throw new RemoteStorageError('invalid-response', 'Invalid S3 listing XML')
 		}
@@ -663,7 +704,17 @@ export class S3RemoteStorage extends RemoteStorage {
 		headers: Record<string, string> = {},
 		options: RemoteScanOptions = {},
 		body?: ArrayBuffer,
+		probe?: S3ProbeContext,
 	): Promise<S3HttpResponse> {
+		const diagnosticId = crypto.randomUUID()
+		const secrets = [
+			this.settings.accessKeyId,
+			this.settings.secretAccessKey,
+			this.settings.sessionToken,
+			url.toString(),
+			url.pathname.length > 1 ? url.pathname : '',
+			url.pathname.length > 1 ? decodeURIComponent(url.pathname) : '',
+		]
 		for (let attempt = 0; ; attempt++) {
 			options.throwIfCancelled?.()
 			const signed = await this.signer.sign(url.toString(), {
@@ -677,6 +728,9 @@ export class S3RemoteStorage extends RemoteStorage {
 				signedHeaders[key] = value
 			})
 			let response: S3HttpResponse
+			const context = { diagnosticId, method, attempt: attempt + 1, ...probe }
+			const started = Date.now()
+			if (probe) logger.debug('[S3] probe request started', context)
 			try {
 				response = await this.transport({
 					url: signed.url,
@@ -684,9 +738,44 @@ export class S3RemoteStorage extends RemoteStorage {
 					headers: signedHeaders,
 					...(body === undefined ? {} : { body }),
 				})
-			} catch {
-				throw new RemoteStorageError('network', 'S3 network request failed')
+			} catch (error) {
+				const nativeError = describeS3Exception(error, secrets)
+				const diagnostic = {
+					...context,
+					elapsedMs: Date.now() - started,
+					nativeError,
+				}
+				logger.warn('[S3] native request failed (no HTTP response)', diagnostic)
+				const detail =
+					nativeError
+						.map((entry) =>
+							[
+								entry.name,
+								entry.code,
+								entry.message,
+								entry.reportedStatus
+									? `reportedStatus=${entry.reportedStatus}`
+									: undefined,
+							]
+								.filter(Boolean)
+								.join(': '),
+						)
+						.join(' <- ') || 'Unknown native error'
+				throw new RemoteStorageError(
+					'network',
+					`S3 ${method} network request failed${probe ? ` [${probe.capability}/${probe.step}]` : ''} (${diagnosticId}): ${detail}`,
+					undefined,
+					diagnostic,
+				)
 			}
+			const diagnostic = {
+				...context,
+				elapsedMs: Date.now() - started,
+				...describeS3Response(response, secrets),
+			}
+			if (probe) logger.debug('[S3] probe response', diagnostic)
+			else if (response.status >= 300)
+				logger.warn('[S3] HTTP request failed', diagnostic)
 			options.throwIfCancelled?.()
 			if (response.status >= 200 && response.status < 300) return response
 			if (
@@ -713,8 +802,9 @@ export class S3RemoteStorage extends RemoteStorage {
 									: 'unknown'
 			throw new RemoteStorageError(
 				code,
-				`S3 ${method} failed (HTTP ${response.status})`,
+				`S3 ${method} failed (HTTP ${response.status}${diagnostic.serviceCode ? `, ${diagnostic.serviceCode}` : ''})${probe ? ` [${probe.capability}/${probe.step}]` : ''}${diagnostic.requestId ? ` RequestId=${diagnostic.requestId}` : ''} (${diagnosticId})`,
 				response.status,
+				diagnostic,
 			)
 		}
 	}

@@ -1,4 +1,4 @@
-import { Notice, Setting } from 'obsidian'
+import { apiVersion, Notice, Platform, Setting } from 'obsidian'
 import { isNotNil } from 'ramda'
 import CacheClearModal from '~/components/CacheClearModal'
 import { IN_DEV } from '~/consts'
@@ -118,7 +118,16 @@ export default class TroubleshootingSettings extends BaseSettings {
 			const fileName = `jasync-logs-${timestamp}.md`
 			const dirPath = 'jasync/logs'
 			const filePath = `${dirPath}/${fileName}`
-			const content = `# JASync Logs\n\nGenerated at: ${now.toLocaleString()}\n\nPlugin version: ${this.plugin.manifest.version}\n\n---\n\n${this.logs}`
+			const platform = Platform.isAndroidApp
+				? 'Android'
+				: Platform.isIosApp
+					? 'iOS'
+					: Platform.isMacOS
+						? 'macOS'
+						: Platform.isWin
+							? 'Windows'
+							: 'Linux/other'
+			const content = `# JASync Logs\n\nGenerated at: ${now.toLocaleString()}\n\nPlugin version: ${this.plugin.manifest.version}\n\nObsidian API version: ${apiVersion}\n\nPlatform: ${platform}\n\nEarlier log entries discarded: ${this.plugin.loggerService.droppedLogCount}\n\n---\n\n${this.logs}`
 
 			await mkdirsVault(this.app.vault, dirPath)
 

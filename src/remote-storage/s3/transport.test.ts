@@ -70,7 +70,12 @@ it('bounds stalled native requests without claiming to abort the network operati
 			method: 'HEAD',
 			headers: {},
 		}),
-	).rejects.toThrow('timed out')
+	).rejects.toMatchObject({
+		name: 'S3RequestTimeoutError',
+		code: 'S3_REQUEST_TIMEOUT',
+		timeoutMs: 30_000,
+		message: 'S3 request timed out after 30000 ms',
+	})
 	await vi.advanceTimersByTimeAsync(30_000)
 	await check
 	expect(vi.getTimerCount()).toBe(0)

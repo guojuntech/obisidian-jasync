@@ -16,7 +16,7 @@ beforeAll(async () => {
 	source = bundle.outputFiles[0].text
 })
 
-function browserStorage(bodies: string[]) {
+function browserStorage(bodies: string[], transportError?: unknown) {
 	const module = {
 		exports: {} as { S3RemoteStorage: typeof S3RemoteStorage },
 	}
@@ -34,6 +34,8 @@ function browserStorage(bodies: string[]) {
 		crypto: globalThis.crypto,
 		atob,
 		btoa,
+		setTimeout,
+		clearTimeout,
 	})
 	runInContext('window = globalThis; self = globalThis', browser)
 	expect(runInContext('typeof Buffer', browser)).toBe('undefined')
@@ -50,15 +52,33 @@ function browserStorage(bodies: string[]) {
 			sessionToken: '',
 			forcePathStyle: false,
 		},
-		async () => ({
-			status: 200,
-			headers: {},
-			body: new TextEncoder().encode(bodies.shift() ?? '').buffer,
-		}),
+		async () => {
+			if (transportError !== undefined) throw transportError
+			return {
+				status: 200,
+				headers: {},
+				body: new TextEncoder().encode(bodies.shift() ?? '').buffer,
+			}
+		},
 	)
 }
 
 describe('S3 in a browser without Node globals', () => {
+	it('reports a redacted native failure without Node globals', async () => {
+		const storage = browserStorage(
+			[],
+			Object.assign(new Error('Socket failed: test-secret'), {
+				code: 'ECONNRESET',
+			}),
+		)
+		await expect(storage.getFileContents('/note.md')).rejects.toMatchObject({
+			code: 'network',
+			message: expect.stringContaining('ECONNRESET'),
+		})
+		await expect(storage.getFileContents('/note.md')).rejects.not.toThrow(
+			'test-secret',
+		)
+	})
 	it('loads, signs and parses a Unicode listing without Buffer', async () => {
 		const storage = browserStorage([
 			`<ListBucketResult><EncodingType>url</EncodingType><IsTruncated>false</IsTruncated>

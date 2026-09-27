@@ -15,16 +15,25 @@ export interface S3HttpResponse {
 
 export type S3Transport = (request: S3HttpRequest) => Promise<S3HttpResponse>
 
+export class S3RequestTimeoutError extends Error {
+	readonly code = 'S3_REQUEST_TIMEOUT'
+	constructor(readonly timeoutMs: number) {
+		super(`S3 request timed out after ${timeoutMs} ms`)
+		this.name = 'S3RequestTimeoutError'
+	}
+}
+
 /** Obsidian's native HTTP transport avoids browser CORS configuration. */
 export const obsidianS3Transport: S3Transport = async (request) => {
 	let timer: number | undefined
+	const timeoutMs = request.method === 'PUT' ? 120_000 : 30_000
 	try {
 		const response = await Promise.race([
 			requestUrl({ ...request, throw: false }),
 			new Promise<never>((_resolve, reject) => {
 				timer = window.setTimeout(
-					() => reject(new Error('S3 request timed out')),
-					request.method === 'PUT' ? 120_000 : 30_000,
+					() => reject(new S3RequestTimeoutError(timeoutMs)),
+					timeoutMs,
 				)
 			}),
 		])
