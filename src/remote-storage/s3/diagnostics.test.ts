@@ -137,21 +137,26 @@ describe('safe S3 diagnostics', () => {
 })
 
 describe('S3 request and capability diagnostics', () => {
-	it('identifies a native HEAD failure after a successful conditional delete, without treating thrown 404 as success', async () => {
+	it('identifies a native GET failure after a successful conditional delete, without treating thrown 404 as success', async () => {
 		const cloud = new S3Fixture()
 		const original = Object.assign(
-			new Error(`HEAD failed ${credentials.secretAccessKey}`),
+			new Error(`GET failed ${credentials.secretAccessKey}`),
 			{ status: 404, code: 'NATIVE_HTTP_ERROR' },
 		)
 		cloud.fail = (request, key) => {
-			if (request.method === 'HEAD' && key.endsWith('/delete')) throw original
+			if (
+				request.method === 'GET' &&
+				key.endsWith('/delete') &&
+				!cloud.objects.has(key)
+			)
+				throw original
 			return undefined
 		}
 		const storage = backend(cloud)
 		const error = await storage.verifyMutationSupport().catch((error) => error)
 		expect(error).toMatchObject({ code: 'network', status: undefined })
 		expect(error.message).toContain(
-			'S3 delete capability check failed: S3 HEAD network request failed [delete/verify-deleted]',
+			'S3 delete capability check failed: S3 GET network request failed [delete/verify-deleted]',
 		)
 		expect(error.message).toContain('reportedStatus=404')
 		expect(storage.capabilities.conditionalDelete).toBe('unknown')
@@ -162,7 +167,7 @@ describe('S3 request and capability diagnostics', () => {
 				String(title).includes('native request failed'),
 			)!
 		expect(log[1]).toMatchObject({
-			method: 'HEAD',
+			method: 'GET',
 			capability: 'delete',
 			step: 'verify-deleted',
 			attempt: 1,
@@ -177,7 +182,7 @@ describe('S3 request and capability diagnostics', () => {
 			expect(exported + error.stack + JSON.stringify(error)).not.toContain(
 				secret,
 			)
-		expect(cloud.requests.filter((r) => r.method === 'HEAD')).toHaveLength(1)
+		expect(cloud.requests.filter((r) => r.method === 'HEAD')).toHaveLength(0)
 	})
 
 	it('reports HTTP 403, COS Code and RequestId and never falls back for permission errors', async () => {
@@ -229,7 +234,7 @@ describe('S3 request and capability diagnostics', () => {
 					httpStatus: 204,
 				}),
 				expect.objectContaining({
-					method: 'HEAD',
+					method: 'GET',
 					step: 'verify-deleted',
 					httpStatus: 404,
 				}),

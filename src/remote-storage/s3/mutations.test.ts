@@ -16,6 +16,78 @@ const backend = (cloud: S3Fixture, endpoint = 'https://storage.example.test') =>
 		cloud.transport,
 	)
 
+it('verifies deletion when native HEAD on a missing object throws Stream closed', async () => {
+	const cloud = new S3Fixture()
+	cloud.objects.set('vault/user.md', bytes('user data'))
+	cloud.fail = (request, key) => {
+		if (request.method === 'HEAD' && !cloud.objects.has(key))
+			throw new Error('Request Failed. IOException Stream closed')
+		return undefined
+	}
+	await expect(backend(cloud).verifyMutationSupport()).resolves.toEqual({
+		create: true,
+		overwrite: true,
+		delete: true,
+	})
+	expect([...cloud.objects.keys()]).toEqual(['vault/user.md'])
+	expect(text(cloud.objects.get('vault/user.md')!)).toBe('user data')
+	expect(cloud.requests.every((request) => request.method !== 'HEAD')).toBe(
+		true,
+	)
+	const reads = cloud.requests.filter(
+		(request) => request.method === 'GET' && request.url.endsWith('/delete'),
+	)
+	expect(reads).toHaveLength(3)
+	expect(reads.at(-1)?.headers['if-match']).toBeUndefined()
+})
+
+it.each([401, 403, 304])(
+	'does not accept HTTP %s from the deletion verification GET as proof of absence',
+	async (status) => {
+		const cloud = new S3Fixture()
+		cloud.fail = (request, key) =>
+			request.method === 'GET' &&
+			key.endsWith('/delete') &&
+			!cloud.objects.has(key)
+				? cloud.response(undefined, status)
+				: undefined
+		const storage = backend(cloud)
+		await expect(storage.verifyMutationSupport()).rejects.toMatchObject({
+			status,
+			message: expect.stringContaining('[delete/verify-deleted]'),
+		})
+		expect(storage.capabilities.conditionalDelete).toBe('unknown')
+		expect(cloud.objects.size).toBe(0)
+	},
+)
+
+it.each(['retained data', ''])(
+	'does not trust a successful DELETE receipt when GET still returns an object (%j)',
+	async (remaining) => {
+		const cloud = new S3Fixture()
+		cloud.fail = (request, key) => {
+			const data = cloud.objects.get(key)
+			if (
+				request.method === 'DELETE' &&
+				data &&
+				request.headers['if-match'] === cloud.etag(data)
+			) {
+				cloud.objects.set(key, bytes(remaining))
+				return cloud.response(undefined, 204)
+			}
+			return undefined
+		}
+		const storage = backend(cloud)
+		await expect(storage.verifyMutationSupport()).resolves.toEqual({
+			create: true,
+			overwrite: true,
+			delete: false,
+		})
+		expect(storage.capabilities.conditionalDelete).toBe('unsupported')
+		expect(cloud.objects.size).toBe(0)
+	},
+)
+
 it('probes conditions on isolated objects and preserves unrelated objects', async () => {
 	const cloud = new S3Fixture()
 	cloud.objects.set('vault/user.md', bytes('user data'))

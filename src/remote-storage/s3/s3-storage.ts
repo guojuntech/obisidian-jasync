@@ -464,7 +464,7 @@ export class S3RemoteStorage extends RemoteStorage {
 			const url = this.objectUrl(`${probeRoot}/${kind}`)
 			const request = (
 				step: S3ProbeContext['step'],
-				method: 'PUT' | 'DELETE' | 'HEAD',
+				method: 'PUT' | 'DELETE' | 'GET',
 				headers: Record<string, string> = {},
 				body?: ArrayBuffer,
 			) =>
@@ -527,7 +527,10 @@ export class S3RemoteStorage extends RemoteStorage {
 						step: 'verify-overwrite',
 					})
 				try {
-					await request('verify-deleted', 'HEAD')
+					// Android native HTTP can throw "IOException Stream closed" for
+					// HEAD on a deleted object. GET this small private probe instead;
+					// only an actual 404 proves absence, never a native exception.
+					await request('verify-deleted', 'GET')
 					return false
 				} catch (error) {
 					if (error instanceof RemoteStorageError && error.code === 'not-found')

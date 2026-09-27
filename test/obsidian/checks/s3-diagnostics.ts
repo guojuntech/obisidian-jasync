@@ -32,18 +32,38 @@ export async function exportsS3Diagnostics(app: App) {
 		const session = await plugin.createRemoteSession()
 		const cloud = new S3Fixture()
 		cloud.fail = (request, key) => {
-			if (request.method === 'HEAD' && key.endsWith('/delete'))
-				throw Object.assign(new Error(`Native HEAD failed ${secrets[1]}`), {
+			if (request.method === 'HEAD' && !cloud.objects.has(key))
+				throw new Error('Request Failed. IOException Stream closed')
+			return undefined
+		}
+		;(session.storage as unknown as { transport: S3Transport }).transport =
+			cloud.transport
+		const support = await session.storage.verifyMutationSupport()
+		assert(support.delete, 'Deletion probe still depends on native HEAD')
+		assert(cloud.objects.size === 0, 'Successful probe cleanup was skipped')
+		assert(
+			cloud.requests.every((request) => request.method !== 'HEAD'),
+			'Capability probe unexpectedly sent HEAD',
+		)
+		const failingSession = await plugin.createRemoteSession()
+		cloud.fail = (request, key) => {
+			if (
+				request.method === 'GET' &&
+				key.endsWith('/delete') &&
+				!cloud.objects.has(key)
+			)
+				throw Object.assign(new Error(`Native GET failed ${secrets[1]}`), {
 					status: 404,
 					code: 'NATIVE_HTTP_ERROR',
 				})
 			return undefined
 		}
-		;(session.storage as unknown as { transport: S3Transport }).transport =
-			cloud.transport
+		;(
+			failingSession.storage as unknown as { transport: S3Transport }
+		).transport = cloud.transport
 		let failure: unknown
 		try {
-			await session.storage.verifyMutationSupport()
+			await failingSession.storage.verifyMutationSupport()
 		} catch (error) {
 			failure = error
 		}
@@ -72,7 +92,7 @@ export async function exportsS3Diagnostics(app: App) {
 			'Obsidian API version:',
 			'native request failed',
 			'verify-deleted',
-			'HEAD',
+			'GET',
 			'reportedStatus',
 			'404',
 			'NATIVE_HTTP_ERROR',

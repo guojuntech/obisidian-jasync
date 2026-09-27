@@ -17,16 +17,16 @@
 | `nativeError`                  | 脱敏后的异常名称、消息、code，以及最多三层原因               |
 | `nativeError[].reportedStatus` | 原生异常自报的 status/statusCode，不等于已收到正常 HTTP 响应 |
 
-| 删除探测的 `step` | 操作                                 |
-| ----------------- | ------------------------------------ |
-| `seed`            | 创建随机探测对象                     |
-| `seed-fallback`   | 仅对探测对象使用已有兼容逻辑重新创建 |
-| `verify-seed`     | 回读初始内容                         |
-| `reject-mismatch` | 使用错误 ETag 测试是否拒绝删除       |
-| `verify-rejected` | 确认对象没有被修改                   |
-| `accept-match`    | 使用正确 ETag 删除                   |
-| `verify-deleted`  | HEAD 检查对象是否不存在              |
-| `cleanup`         | 清理随机探测对象                     |
+| 删除探测的 `step` | 操作                                    |
+| ----------------- | --------------------------------------- |
+| `seed`            | 创建随机探测对象                        |
+| `seed-fallback`   | 仅对探测对象使用已有兼容逻辑重新创建    |
+| `verify-seed`     | 回读初始内容                            |
+| `reject-mismatch` | 使用错误 ETag 测试是否拒绝删除          |
+| `verify-rejected` | 确认对象没有被修改                      |
+| `accept-match`    | 使用正确 ETag 删除                      |
+| `verify-deleted`  | GET 检查对象是否不存在（0.2.8 为 HEAD） |
+| `cleanup`         | 清理随机探测对象                        |
 
 覆盖探测另有 `verify-overwrite`，用于回读覆盖后的内容。
 
@@ -44,3 +44,5 @@
 新增 S3 诊断不记录配置密钥、令牌、Authorization、完整 URL、请求正文或原始响应正文；错误 XML 只提取受限的 Code 和 RequestId。已有同步日志仍可能包含 Bucket、Prefix 和笔记路径。日志笔记遵循现有过滤与同步规则。
 
 0.2.8 增加可观测信息，不代表 Android 网络问题已修复。0.2.7 丢弃的原始异常无法恢复，需要升级后重新复现和导出。
+
+0.2.9 根据 Android 的 `HEAD [delete/verify-deleted] ... IOException Stream closed` 日志，将删除探测的最终检查改为 GET，绕开这一步的 HEAD 请求。升级后应看到 `method: GET`、`step: verify-deleted`、`httpStatus: 404`。若 GET 仍抛出异常，请导出包含该 diagnosticId 的开始、响应或原生异常记录；没有 HTTP 响应时不会凭空生成 COS 错误码。此调整未替换普通文件 stat 的 HEAD，也不代表所有 Android 网络问题已解决。

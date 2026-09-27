@@ -2,9 +2,19 @@
 
 ## Delivered scope
 
-JASync 0.2.8 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.9 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.9 — Avoid HEAD in deletion capability verification
+
+The user's Android 0.2.8 log identified `delete/verify-deleted`: after the conditional DELETE returned success, native HEAD raised `Request Failed. IOException Stream closed` without delivering an HTTP response. Cleanup DELETE returned 204. This identifies the failed request, not the native implementation's root cause or an authorization failure.
+
+The absence check now uses GET on the same small, private probe object (24-byte seed). Only an actual HTTP 404 proves absence. A retained or empty object does not pass; authentication/permission failures, unexpected statuses and native exceptions remain failures. Normal user-file stat still uses HEAD. Conditional mutations, approval, recovery, retries and cleanup are unchanged.
+
+A regression injected the exact native exception for missing-object HEAD and failed against 0.2.8 before the fix. Additional cases cover GET 401/403/304, thrown native 404, and DELETE success receipts that leave nonempty or empty objects. The production-bundle Obsidian check covers successful probing under this simulated HEAD failure and export of a subsequent native GET failure. These simulations do not replace Android device confirmation.
+
+Validation: 69 unit-test files / 850 tests and 18 native Obsidian checks passed. ESLint, TypeScript, production build and the exact five-file ZIP comparison passed.
 
 ## 0.2.8 — Exportable S3 diagnostics
 
