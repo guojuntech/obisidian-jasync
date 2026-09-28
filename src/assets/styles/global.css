@@ -268,6 +268,23 @@
 	min-width: 5.5rem;
 }
 
+.jasync-progress__footer button.jasync-progress__stop:disabled {
+	background-color: var(--background-modifier-border);
+	color: var(--text-muted);
+	box-shadow: none;
+	opacity: 1;
+	cursor: not-allowed;
+}
+
+.jasync-progress__footer button.jasync-progress__close--success {
+	background-color: #15803d;
+	color: #fff;
+}
+
+.jasync-progress__footer button.jasync-progress__close--success:hover {
+	background-color: #166534;
+}
+
 .connection-button.success {
 	background-color: var(--background-modifier-success);
 	color: var(--background-primary);

@@ -2,9 +2,17 @@
 
 ## Delivered scope
 
-JASync 0.2.11 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.12 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
-Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. The AI conflict-resolution header action is disabled by removing service registration and settings refresh hooks. Prefix is the single remote root setting; Path Style defaults to off.
+
+The sync progress window keeps Stop sync visible but disabled and gray in terminal states. Successful completion gives Close a green background and white text; active sync restores the red Stop sync and neutral Hide controls.
+
+## 0.2.12 — Disable the AI conflict action and clarify completion controls
+
+The note header no longer registers the AI conflict-resolution service or refreshes it after settings changes. Sync completion keeps Stop sync visible, disabled and gray instead of relying on a hidden utility class. Close becomes green with white text only after successful completion. Returning to active sync restores enabled Stop sync and neutral Hide controls.
+
+The existing native Obsidian check verifies the disabled button remains visible, the actual rendered Close colors, and restoration of active controls. Validation: 71 unit files / 903 tests, 19 native desktop Obsidian checks, ESLint, TypeScript, production build and five-file ZIP checks passed.
 
 ## 0.2.11 — Android HEAD response compatibility
 

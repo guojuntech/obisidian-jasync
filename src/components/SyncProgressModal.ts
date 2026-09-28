@@ -264,9 +264,14 @@ export default class SyncProgressModal extends Modal {
 			state === 'error' ||
 			state === 'cancelled'
 
-		this.stopButtonComponent.buttonEl.toggleClass('hidden', isTerminal)
+		this.stopButtonComponent.setDisabled(isTerminal)
+		this.stopButtonComponent.buttonEl.toggleClass('mod-warning', !isTerminal)
 		this.hideButtonComponent.setButtonText(
 			i18n.t(isTerminal ? 'sync.closeButton' : 'sync.hideButton'),
+		)
+		this.hideButtonComponent.buttonEl.toggleClass(
+			'jasync-progress__close--success',
+			state === 'complete',
 		)
 	}
 
@@ -444,7 +449,7 @@ export default class SyncProgressModal extends Modal {
 		const stopButton = new ButtonComponent(footerButtons)
 			.setButtonText(i18n.t('sync.stopButton'))
 			.onClick(() => emitCancelSync())
-		stopButton.buttonEl.addClass('mod-warning')
+		stopButton.buttonEl.addClass('jasync-progress__stop')
 		this.stopButtonComponent = stopButton
 
 		this.hideButtonComponent = new ButtonComponent(footerButtons)

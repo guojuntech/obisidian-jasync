@@ -286,10 +286,45 @@ export async function rendersSyncProgress(app: App) {
 			progressLabel?.textContent?.includes('100'),
 			'Sync progress modal did not show 100% for an empty completed sync',
 		)
-		const stopButton = modal.querySelector('.jasync-progress__footer button')
+		const [stopButton, closeButton] = Array.from(
+			modal.querySelectorAll<HTMLButtonElement>(
+				'.jasync-progress__footer button',
+			),
+		)
 		assert(
-			stopButton?.classList.contains('hidden'),
-			`Sync progress modal kept its stop control after completion: ${stopButton?.className ?? 'missing'}`,
+			stopButton?.disabled && stopButton.getBoundingClientRect().width > 0,
+			'Stop sync must remain visible and disabled after completion',
+		)
+		assert(
+			!stopButton.classList.contains('mod-warning'),
+			'Completed sync retained the red stop button',
+		)
+		assert(closeButton && !closeButton.disabled, 'Close must remain enabled')
+		assert(
+			['rgb(21, 128, 61)', 'rgb(22, 101, 52)'].includes(
+				getComputedStyle(closeButton).backgroundColor,
+			),
+			'Successful completion did not make Close green',
+		)
+		assert(
+			getComputedStyle(closeButton).color === 'rgb(255, 255, 255)',
+			'Green Close button needs readable text',
+		)
+		const completedStopColor = getComputedStyle(stopButton).backgroundColor
+		progress.syncEnd = false
+		progress.updateModal()
+		progress.updateModal.flush?.()
+		assert(
+			!stopButton.disabled,
+			'Stop sync stayed disabled when synchronization resumed',
+		)
+		assert(
+			getComputedStyle(stopButton).backgroundColor !== completedStopColor,
+			'Stop sync did not switch between active and disabled colors',
+		)
+		assert(
+			!closeButton.classList.contains('jasync-progress__close--success'),
+			'Active sync retained the successful Close styling',
 		)
 	} finally {
 		progress.closeProgressModal()

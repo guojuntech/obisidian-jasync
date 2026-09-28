@@ -122,13 +122,12 @@ export default class SettingsService extends BaseService {
 	async saveSettings() {
 		await this.plugin.saveData(this.plugin.settings)
 		await this.plugin.chatService.handleSettingsChanged()
-		await this.plugin.aiConflictResolverService.refresh()
 	}
 
 	/**
 	 * Applies an AI-originated, already-validated settings patch and runs the
 	 * same side-effect chain used after reloading settings from disk (language
-	 * refresh, chat coordination, conflict refresh, schedule update, settings
+	 * refresh, chat coordination, schedule update, settings
 	 * tab rerender).
 	 */
 	async applySettingsPatch(patch: NormalizedSettingsPatch) {
@@ -136,7 +135,6 @@ export default class SettingsService extends BaseService {
 		await this.plugin.saveData(this.plugin.settings)
 		await this.plugin.i18nService.update()
 		await this.plugin.chatService.handleSettingsChanged()
-		await this.plugin.aiConflictResolverService.refresh()
 		await this.plugin.scheduledSyncService.updateInterval()
 		await this.plugin.settingTab?.rerenderIfVisible()
 	}
@@ -208,7 +206,6 @@ export default class SettingsService extends BaseService {
 			this.plugin.modelsPresetService.initializeFromLocalSettings()
 			await this.plugin.i18nService.update()
 			await this.plugin.chatService.handleSettingsChanged()
-			await this.plugin.aiConflictResolverService.refresh()
 			await this.plugin.scheduledSyncService.updateInterval()
 			await this.plugin.settingTab?.rerenderIfVisible()
 		})()

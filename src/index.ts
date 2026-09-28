@@ -12,7 +12,6 @@ import { registerJASyncIcon } from './assets/icons/jasync-sync-icon'
 import { SyncRibbonManager } from './components/SyncRibbonManager'
 import { emitCancelSync } from './events'
 import i18n from './i18n'
-import AIConflictResolverService from './services/ai-conflict-resolver.service'
 import ChatService from './services/chat.service'
 import CommandService from './services/command.service'
 import EventsService from './services/events.service'
@@ -57,7 +56,6 @@ export default class JASyncPlugin extends Plugin {
 	public syncExecutorService = new SyncExecutorService(this)
 	public gcService = new GcService(this)
 	public chatService = new ChatService(this)
-	public aiConflictResolverService = new AIConflictResolverService(this)
 	public realtimeSyncService = new RealtimeSyncService(
 		this,
 		this.syncExecutorService,
@@ -84,7 +82,6 @@ export default class JASyncPlugin extends Plugin {
 			this.realtimeSyncService,
 			this.mcpService,
 			this.chatService,
-			this.aiConflictResolverService,
 			this.scheduledSyncService,
 		]
 	}
