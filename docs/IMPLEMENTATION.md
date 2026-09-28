@@ -2,9 +2,21 @@
 
 ## Delivered scope
 
-JASync 0.2.10 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.11 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.11 — Android HEAD response compatibility
+
+The native transport marks only Android HEAD requests rejected before delivery of a response with the known `Request Failed. IOException Stream closed` message. Analysis of the official Obsidian 1.13.8 APK found an unconditional error-stream read before status/headers are returned. A null stream produces this exception for multiple HTTP error statuses; it must never imply 404 by itself.
+
+Normal stat still uses HEAD. A marked failure triggers a newly signed GET on the same key with `Range: bytes=0-0`. Real 404 follows the existing directory/absence handling, while 401/403/412 and network errors propagate. A 206 requires a valid one-byte range, consistent response length, safe total size and complete metadata. Total object size comes from Content-Range. A 416 causes one further HEAD without recursive fallback; that result may describe a now-nonempty object. A server ignoring Range may return 200, which is accepted only with validated full-body length and metadata. Such a server can cause a full download.
+
+The new observation preserves current ETag/VersionId and feeds existing sync-plan checks. The engine regression covers creation, modification and disappearance since preview and requires no user-file mutations. Write conditions and mutation retries are unchanged; existing bounded HTTP read retries still apply. Compatibility works with verbose logging off. Parent request ID, fallback reason and step appear in the fallback request/response context; no HTTP status is invented for the original HEAD.
+
+The regression suite drives the actual native transport using a mocked Android requestUrl boundary. An additional Obsidian check evaluates the exact production browser bundle in an isolated realm and covers 404, 206, 416 and 403 through its production session factory. Seven real COS cases use the test environment and a simulated Android response-loss boundary, with cleanup verified. These checks do not constitute Android device acceptance.
+
+Validation: 71 unit files / 903 tests, 19 native desktop Obsidian checks, 7 real COS cases, ESLint, TypeScript, production build and five-file ZIP equality checks passed.
 
 ## 0.2.10 — Opt-in verbose S3 request diagnostics
 

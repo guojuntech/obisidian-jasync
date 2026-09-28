@@ -10,7 +10,10 @@ import {
 	describeS3VerboseResponse,
 } from './diagnostics'
 
-vi.mock('obsidian', () => ({ requestUrl: vi.fn() }))
+vi.mock('obsidian', () => ({
+	Platform: { isAndroidApp: false },
+	requestUrl: vi.fn(),
+}))
 vi.mock('~/utils/logger', () => ({
 	default: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }))

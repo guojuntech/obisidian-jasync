@@ -1,7 +1,7 @@
 {
 	"id": "jasync",
 	"name": "JASync",
-	"version": "0.2.10",
+	"version": "0.2.11",
 	"minAppVersion": "1.7.2",
 	"description": "S3 synchronization with plan confirmation, conflict handling and recovery backups.",
 	"author": "guojuntech",

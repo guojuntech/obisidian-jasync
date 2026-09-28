@@ -2,7 +2,10 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { requestUrl } from 'obsidian'
 import { obsidianS3Transport } from './transport'
 
-vi.mock('obsidian', () => ({ requestUrl: vi.fn() }))
+vi.mock('obsidian', () => ({
+	Platform: { isAndroidApp: false },
+	requestUrl: vi.fn(),
+}))
 afterEach(() => {
 	vi.useRealTimers()
 	vi.unstubAllGlobals()

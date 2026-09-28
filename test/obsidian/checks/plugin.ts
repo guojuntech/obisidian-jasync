@@ -3,6 +3,8 @@ import type { App } from 'obsidian'
 import * as editorState from '@codemirror/state'
 import * as editorView from '@codemirror/view'
 import { CHATBOX_VIEW_TYPE } from '~/views/chatbox.view'
+import type JASyncPlugin from '~/index'
+import { DEFAULT_S3_SETTINGS } from '~/remote-storage/s3/settings'
 import { assert } from './assert'
 
 interface ProductionPlugin {
@@ -80,6 +82,117 @@ export async function evaluatesProductionBundleWithoutNode(app: App) {
 			typeof browser.Buffer === 'undefined',
 			'Bundle installed a global Buffer',
 		)
+	} finally {
+		frame.remove()
+	}
+}
+
+/** Run the release bundle with the Android bridge failure simulated in JS. */
+export async function checksAndroidHeadFallbackInProductionBundle(app: App) {
+	const source = await app.vault.adapter.read(
+		`${app.vault.configDir}/plugins/jasync/main.js`,
+	)
+	const frame = document.createElement('iframe')
+	frame.hidden = true
+	document.body.appendChild(frame)
+	try {
+		const browser = frame.contentWindow as Window & typeof globalThis
+		const methods: string[] = []
+		let status = 404
+		let heads = 0
+		const modules: Record<string, unknown> = {
+			obsidian: {
+				...obsidian,
+				Platform: { ...obsidian.Platform, isAndroidApp: true },
+				requestUrl: async (request: obsidian.RequestUrlParam) => {
+					methods.push(request.method ?? 'GET')
+					const isHead = request.method === 'HEAD'
+					if (isHead && heads++ === 0)
+						throw new browser.Error('Request Failed. IOException Stream closed')
+					const isList = new URL(request.url).searchParams.has('list-type')
+					if (!isHead && !isList)
+						assert(
+							request.headers?.range === 'bytes=0-0',
+							'Fallback was not a bounded GET',
+						)
+					const body = isList
+						? '<ListBucketResult><EncodingType>url</EncodingType><IsTruncated>false</IsTruncated></ListBucketResult>'
+						: status === 206
+							? 'a'
+							: ''
+					return {
+						status: isHead || isList ? 200 : status,
+						headers: {
+							etag: '"current"',
+							'last-modified': 'Mon, 28 Sep 2026 00:00:00 GMT',
+							'content-length': String(body.length),
+							...(status === 206 ? { 'content-range': 'bytes 0-0/20' } : {}),
+						},
+						arrayBuffer: new browser.TextEncoder().encode(body).buffer,
+					}
+				},
+			},
+			'@codemirror/state': editorState,
+			'@codemirror/view': editorView,
+		}
+		const pluginModule = { exports: {} as { default: typeof JASyncPlugin } }
+		new browser.Function('require', 'module', 'exports', source)(
+			(name: string) => {
+				assert(Object.hasOwn(modules, name), `Unexpected host module: ${name}`)
+				return modules[name]
+			},
+			pluginModule,
+			pluginModule.exports,
+		)
+		const context = {
+			localSettings: {
+				verboseS3Log: false,
+				s3: {
+					...DEFAULT_S3_SETTINGS,
+					endpoint: 'https://example.test',
+					bucket: 'test-bucket',
+					accessKeyId: 'test-key',
+					secretAccessKey: 'test-secret',
+				},
+			},
+		} as JASyncPlugin
+		const session =
+			await pluginModule.exports.default.prototype.createRemoteSession.call(
+				context,
+			)
+		assert(
+			!(await session.storage.exists('/new.md')),
+			'Missing object was not handled',
+		)
+		assert(
+			methods.join() === 'HEAD,GET,GET',
+			'Missing object skipped HEAD or directory verification',
+		)
+		for (const next of [206, 416, 403]) {
+			status = next
+			heads = 0
+			methods.length = 0
+			let result, error
+			try {
+				result = await session.storage.stat('/new.md')
+			} catch (e) {
+				error = e
+			}
+			if (next === 403)
+				assert(
+					(error as { code?: string })?.code === 'forbidden',
+					'Permission failure became absence',
+				)
+			else
+				assert(
+					result?.isDir === false && result.size === (next === 206 ? 20 : 0),
+					`Incorrect fallback size for ${next}`,
+				)
+			assert(
+				methods.join() === (next === 416 ? 'HEAD,GET,HEAD' : 'HEAD,GET'),
+				`Unexpected fallback loop for ${next}`,
+			)
+		}
 	} finally {
 		frame.remove()
 	}

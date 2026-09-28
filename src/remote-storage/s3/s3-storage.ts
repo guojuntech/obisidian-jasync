@@ -23,6 +23,10 @@ import {
 } from './settings'
 import type { S3HttpResponse, S3Transport, S3TransportEvent } from './transport'
 import {
+	AndroidHeadResponseError,
+	type HeadFallbackContext,
+} from './head-compatibility'
+import {
 	describeS3Exception,
 	describeS3Response,
 	describeS3Request,
@@ -89,10 +93,14 @@ export class S3RemoteStorage extends RemoteStorage {
 			return this.directory('')
 		}
 		try {
-			const response = await this.request(
-				'HEAD',
-				this.objectUrl(this.key(path)),
-			)
+			let response: S3HttpResponse
+			try {
+				response = await this.request('HEAD', this.objectUrl(this.key(path)))
+			} catch (error) {
+				if (!(error instanceof AndroidHeadResponseError) || !error.diagnosticId)
+					throw error
+				return await this.statAfterLostHead(relative, error.diagnosticId)
+			}
 			const headers = new Headers(response.headers)
 			return this.file(
 				relative,
@@ -112,6 +120,97 @@ export class S3RemoteStorage extends RemoteStorage {
 			if (page.contents.length) return this.directory(relative)
 			throw error
 		}
+	}
+
+	private async statAfterLostHead(
+		relative: string,
+		parentDiagnosticId: string,
+	): Promise<RemoteStat> {
+		const context: HeadFallbackContext = {
+			parentDiagnosticId,
+			fallbackReason: 'android-head-stream-closed',
+			fallbackStep: 'range-get',
+		}
+		logger.warn(
+			'[S3] HEAD response unavailable; checking with Range GET',
+			context,
+		)
+		const url = this.objectUrl(this.key(`/${relative}`))
+		let response: S3HttpResponse
+		try {
+			response = await this.request(
+				'GET',
+				url,
+				{ Range: 'bytes=0-0' },
+				{},
+				undefined,
+				undefined,
+				context,
+			)
+		} catch (error) {
+			if (!(error instanceof RemoteStorageError) || error.status !== 416)
+				throw error
+			// A zero-byte object cannot satisfy the range. Fetch metadata once;
+			// this HEAD must not enter the compatibility path recursively.
+			response = await this.request('HEAD', url, {}, {}, undefined, undefined, {
+				...context,
+				fallbackStep: 'empty-file-head',
+			})
+			const headers = new Headers(response.headers)
+			if (response.status !== 200 || headers.has('content-range'))
+				throw new RemoteStorageError(
+					'invalid-response',
+					'Invalid S3 fallback HEAD response',
+				)
+			return this.file(
+				relative,
+				headers.get('content-length'),
+				headers.get('last-modified'),
+				headers.get('etag'),
+				headers.get('x-amz-version-id'),
+			)
+		}
+		const headers = new Headers(response.headers)
+		const length = headers.get('content-length')
+		if (
+			length !== null &&
+			(!/^\d+$/.test(length) || Number(length) !== response.body.byteLength)
+		)
+			throw new RemoteStorageError(
+				'invalid-response',
+				'S3 fallback response length mismatch',
+			)
+		let size: string | null
+		if (response.status === 206) {
+			const range = headers.get('content-range')?.match(/^bytes 0-0\/(\d+)$/)
+			if (
+				!range ||
+				!Number.isSafeInteger(Number(range[1])) ||
+				Number(range[1]) < 1 ||
+				response.body.byteLength !== 1
+			)
+				throw new RemoteStorageError(
+					'invalid-response',
+					'Invalid S3 fallback Content-Range',
+				)
+			size = range[1]
+		} else if (response.status === 200 && !headers.has('content-range')) {
+			// Some compatible services ignore Range and return the full object.
+			// Validate its size instead of treating it as a one-byte response.
+			size = length
+		} else {
+			throw new RemoteStorageError(
+				'invalid-response',
+				'Unexpected S3 fallback GET response',
+			)
+		}
+		return this.file(
+			relative,
+			size,
+			headers.get('last-modified'),
+			headers.get('etag'),
+			headers.get('x-amz-version-id'),
+		)
 	}
 
 	async getDirectoryContents(path: string): Promise<RemoteStat[]> {
@@ -714,6 +813,7 @@ export class S3RemoteStorage extends RemoteStorage {
 		options: RemoteScanOptions = {},
 		body?: ArrayBuffer,
 		probe?: S3ProbeContext,
+		fallback?: HeadFallbackContext,
 	): Promise<S3HttpResponse> {
 		const diagnosticId = crypto.randomUUID()
 		const verbose = this.diagnostics.verbose?.() === true
@@ -736,6 +836,7 @@ export class S3RemoteStorage extends RemoteStorage {
 				method,
 				attempt: attempt + 1,
 				...probe,
+				...fallback,
 			}
 			const signStarted = Date.now()
 			let signed: Request
@@ -836,7 +937,7 @@ export class S3RemoteStorage extends RemoteStorage {
 				)
 			} catch (error) {
 				const nativeError = describeS3Exception(
-					error,
+					error instanceof AndroidHeadResponseError ? error.cause : error,
 					[...secrets, ...(signature ? [signature] : [])],
 					verbose,
 				)
@@ -867,12 +968,10 @@ export class S3RemoteStorage extends RemoteStorage {
 								.join(': '),
 						)
 						.join(' <- ') || 'Unknown native error'
-				throw new RemoteStorageError(
-					'network',
-					`S3 ${method} network request failed${probe ? ` [${probe.capability}/${probe.step}]` : ''} (${diagnosticId}): ${detail}`,
-					undefined,
-					diagnostic,
-				)
+				const message = `S3 ${method} network request failed${probe ? ` [${probe.capability}/${probe.step}]` : ''} (${diagnosticId}): ${detail}`
+				if (error instanceof AndroidHeadResponseError)
+					throw new AndroidHeadResponseError(message, diagnostic, diagnosticId)
+				throw new RemoteStorageError('network', message, undefined, diagnostic)
 			}
 			const diagnostic = {
 				...context,
@@ -887,7 +986,8 @@ export class S3RemoteStorage extends RemoteStorage {
 					...describeS3VerboseResponse(response, diagnosticSecrets),
 				})
 			if (probe) logger.debug('[S3] probe response', diagnostic)
-			else if (response.status >= 300)
+			if (fallback) logger.debug('[S3] HEAD fallback response', diagnostic)
+			else if (!probe && response.status >= 300)
 				logger.warn('[S3] HTTP request failed', diagnostic)
 			options.throwIfCancelled?.()
 			if (response.status >= 200 && response.status < 300) return response

@@ -72,10 +72,26 @@
 - `stage: response-arraybuffer`、`state: failed`：已读取响应元数据，访问 arrayBuffer 失败。之前记录的 `httpStatus` 和响应头可用于分析；失败仍中止操作，不将这个状态当成完整成功的响应。
 - `verbose response`：插件成功读取响应；查看实际状态、服务错误码及 RequestId。
 
-这些阶段是插件与 Obsidian API 的边界，不代表能观察 Java 内部的 socket、TLS 或响应体解码过程。本版保留普通 stat 的 HEAD 请求，不额外重试或替换成 GET，也不改写请求头。
+这些阶段是插件与 Obsidian API 的边界，不代表能观察 Java 内部的 socket、TLS 或响应体解码过程。0.2.10 保留普通 stat 的 HEAD 请求；0.2.11 增加下文所述的定向补查。
 
 ### 导出内容与范围
 
 详细日志会包含 Bucket、Prefix、文件名和对象路径。凭据及实际签名会脱敏，笔记正文、列表正文、原始错误 XML、CanonicalRequest 和 StringToSign 不写入日志。最多记录 64 个请求/响应头和 64 个查询项（另带总数），一般文本字段限 512 字符，URL 限 8192、对象路径限 4096；错误 XML 只检查前 16 KiB，异常最多三层、每层 12 行栈。日志仍只保留最近 2000 条，详细模式下更容易达到上限。
 
 导出头部增加 Verbose S3 log 开关状态及 `S3 diagnostics format: 2`。日志位于内存，重启/禁用插件后无法补导出；详细日志无法追溯开关开启前的请求。
+
+## 0.2.11：Android HEAD 失败后的补查
+
+补查自动生效，与 Verbose log 开关无关。仅当 Android 的 HEAD 在原生 requestUrl 阶段抛出 `Request Failed. IOException Stream closed`，尚未交付响应对象时触发。已交付响应后的读取异常、其他网络异常以及 GET/PUT/DELETE 原生失败不触发此处理。
+
+按以下日志链检查结果：
+
+1. 原 HEAD 的 `native request failed (no HTTP response)`：记录异常与原 diagnosticId，HTTP 状态仍然未知。
+2. `HEAD response unavailable; checking with Range GET`：开始对相同对象补发 `GET Range: bytes=0-0`。
+3. `HEAD fallback response`：记录补查的真实方法、HTTP 状态、serviceCode、RequestId；开启详细模式后，`verbose response` 另含脱敏 Message 与响应头。
+
+补查使用独立 diagnosticId，以 `parentDiagnosticId` 指向最初失败的 HEAD。`fallbackReason: android-head-stream-closed` 标明触发原因；`fallbackStep: range-get` 表示 Range GET，`empty-file-head` 表示收到 416 后的单次 HEAD。HTTP 503 等仍按原有只读重试上限执行，以 attempt 区分，不循环进入补查。
+
+GET 404 才进入不存在/目录检查。GET 403 仍然报权限或签名错误。GET 206 以 Content-Range 的总大小作为对象大小，不能把返回的一字节当作文件大小。空对象通常返回 416，再用 HEAD 获取元数据；第二次 HEAD 如果仍有原生异常则停止。服务端忽略 Range 返回 200 时校验完整响应，可能下载整个对象。请求间对象变化由后续计划复核处理，不把补查当成原请求的历史状态。
+
+根因依据：对 [官方 Obsidian Android 1.13.8 APK](https://github.com/obsidianmd/obsidian-releases/releases/tag/v1.13.8) 的静态分析发现，其原生桥接先读取状态，再无条件读取错误流，最后才构造 JS 响应。HEAD 错误响应没有正文，错误流可为 null，读取时抛出 Stream closed，状态因此未返回插件。HEAD 403、404、412、500 都可能出现相同异常。已用最小 Java 用例和真实 COS 对照复现该处理顺序；Android 实机仍需复测。

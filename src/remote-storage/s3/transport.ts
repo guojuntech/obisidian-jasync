@@ -1,4 +1,5 @@
-import { requestUrl } from 'obsidian'
+import { Platform, requestUrl } from 'obsidian'
+import { AndroidHeadResponseError } from './head-compatibility'
 
 export interface S3HttpRequest {
 	url: string
@@ -89,6 +90,17 @@ export const obsidianS3Transport: S3Transport = async (request, observe) => {
 		return { status: httpStatus, headers, body }
 	} catch (error) {
 		emit('failed', { error })
+		// Obsidian Android 1.13.8 reads a null error stream for failed HEADs
+		// before returning status/headers to JS. Never infer the lost status.
+		if (
+			request.method === 'HEAD' &&
+			stage === 'request-url' &&
+			!responseReceived &&
+			error instanceof Error &&
+			/^Request Failed\.\s+IOException\s+Stream closed$/.test(error.message) &&
+			Platform.isAndroidApp
+		)
+			throw new AndroidHeadResponseError(error.message, error)
 		throw error
 	} finally {
 		if (timer !== undefined) window.clearTimeout(timer)
