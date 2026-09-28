@@ -153,7 +153,9 @@ export default class JASyncPlugin extends Plugin {
 	}
 
 	createRemoteSession() {
-		return createRemoteSession(this.localSettings.s3)
+		return createRemoteSession(this.localSettings.s3, undefined, {
+			verbose: () => this.localSettings.verboseS3Log === true,
+		})
 	}
 
 	isAccountConfigured(): boolean {

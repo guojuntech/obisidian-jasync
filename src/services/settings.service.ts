@@ -48,9 +48,7 @@ export default class SettingsService extends BaseService {
 		const loadedSettings = (await this.plugin.loadData()) as unknown
 		const storedSettings =
 			loadedSettings && typeof loadedSettings === 'object'
-				? (stripRemovedIntegrations(
-						loadedSettings,
-					) as Partial<JASyncSettings>)
+				? (stripRemovedIntegrations(loadedSettings) as Partial<JASyncSettings>)
 				: {}
 		this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, storedSettings)
 		if (
@@ -169,6 +167,8 @@ export default class SettingsService extends BaseService {
 			...DEFAULT_S3_SETTINGS,
 			...this.plugin.localSettings.s3,
 		}
+		this.plugin.localSettings.verboseS3Log =
+			this.plugin.localSettings.verboseS3Log === true
 		if (this.plugin.localSettings.executionVersion !== 1) {
 			// Preview builds shipped an inactive 5-minute timer. Upgrading must
 			// never turn that dormant default into unattended file writes.

@@ -2,9 +2,21 @@
 
 ## Delivered scope
 
-JASync 0.2.9 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 0.2.10 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. Prefix is the single remote root setting; Path Style defaults to off.
+
+## 0.2.10 — Opt-in verbose S3 request diagnostics
+
+Troubleshoot adds a default-off Verbose log toggle persisted only in `data.local.json`. The production session passes a live predicate so subsequent requests on an existing session honor changes without changing the session identity. Every S3 API call can log its method, URL/object path, safe query parameters, signed header names and credential scope, redacted request/response headers, body byte counts, millisecond timestamps, timing, attempt and caller stack. Successes and ordinary HEAD requests are included.
+
+The native transport observer identifies requestUrl invocation/resolution, response metadata access and arrayBuffer access. A failure after metadata preserves the observed status in diagnostics while remaining a network error; no synthetic 404, success or new fallback is introduced. A failure inside Obsidian before requestUrl resolves cannot expose its underlying Java/HTTP state. Existing deadlines, signing inputs, read retry policy and mutation protection are unchanged.
+
+Credential values (including URL-encoded forms), actual request signatures, authorization/token/cookie headers and unknown header/query values are redacted. Successful response bodies, request bodies, raw error XML and signing material are omitted; only a bounded XML-decoded, redacted service Message is added. Fields and stack/cause depth are bounded. Exports retain the 2000-entry limit and add toggle state and diagnostics format version. Object filenames and bucket/prefix paths are deliberately visible in verbose mode.
+
+Tests cover live toggling, request preservation, redaction, XML entity echoes, requestUrl rejection versus response body access failure, correlated read retries and observer isolation. The native production-bundle check operates the actual Troubleshoot toggle, reloads its saved local setting, exercises S3 diagnostics and exports a redacted note. Android device/network reproduction remains outstanding.
+
+Validation: 70 unit-test files / 857 tests and 18 native Obsidian checks passed, including the actual toggle, persisted reload and exported log note. ESLint, TypeScript, production build and the five-file ZIP comparison passed.
 
 ## 0.2.9 — Avoid HEAD in deletion capability verification
 

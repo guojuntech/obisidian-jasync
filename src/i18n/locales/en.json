@@ -308,6 +308,8 @@
 			"exceedsMaxSize": "Chunk size cannot exceed 64 MiB and was adjusted"
 		},
 		"log": {
+			"verboseName": "Verbose log (S3)",
+			"verboseDesc": "Log every S3 request with object paths, query parameters, redacted request/response headers, timings and native transport stages. Local to this device. Credentials, signatures and note contents are omitted; filenames are included. Enable, reproduce, then save logs to a note.",
 			"title": "Debug logs",
 			"name": "Console logs",
 			"desc": "Save logs after a sync error, before restarting or disabling the plugin. Includes S3 probe steps, HTTP status, service error codes, request IDs and redacted native errors. Keeps the latest 2000 entries.",

@@ -49,6 +49,19 @@ export default class TroubleshootingSettings extends BaseSettings {
 			})
 
 		new Setting(this.containerEl)
+			.setName(i18n.t('settings.log.verboseName'))
+			.setDesc(i18n.t('settings.log.verboseDesc'))
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.plugin.localSettings.verboseS3Log === true)
+					.onChange(async (enabled) => {
+						this.plugin.localSettings.verboseS3Log = enabled
+						await this.plugin.settingsService.saveLocalSettings()
+						logger.info('[S3] verbose logging changed', { enabled })
+					})
+			})
+
+		new Setting(this.containerEl)
 			.setName(i18n.t('settings.log.name'))
 			.setDesc(i18n.t('settings.log.desc'))
 			.addButton((button) => {
@@ -127,7 +140,7 @@ export default class TroubleshootingSettings extends BaseSettings {
 						: Platform.isWin
 							? 'Windows'
 							: 'Linux/other'
-			const content = `# JASync Logs\n\nGenerated at: ${now.toLocaleString()}\n\nPlugin version: ${this.plugin.manifest.version}\n\nObsidian API version: ${apiVersion}\n\nPlatform: ${platform}\n\nEarlier log entries discarded: ${this.plugin.loggerService.droppedLogCount}\n\n---\n\n${this.logs}`
+			const content = `# JASync Logs\n\nGenerated at: ${now.toLocaleString()}\n\nPlugin version: ${this.plugin.manifest.version}\n\nObsidian API version: ${apiVersion}\n\nPlatform: ${platform}\n\nVerbose S3 log: ${this.plugin.localSettings.verboseS3Log === true}\n\nS3 diagnostics format: 2\n\nEarlier log entries discarded: ${this.plugin.loggerService.droppedLogCount}\n\n---\n\n${this.logs}`
 
 			await mkdirsVault(this.app.vault, dirPath)
 

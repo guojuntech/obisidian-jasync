@@ -225,6 +225,7 @@ export const DEFAULT_SETTINGS: JASyncSettings = {
 
 export interface JASyncLocalSettings {
 	executionVersion?: 1
+	verboseS3Log?: boolean
 	s3: S3Settings
 	vaultId: string
 	syncPolicy: SyncPolicy
@@ -235,6 +236,7 @@ export interface JASyncLocalSettings {
 }
 
 export const DEFAULT_LOCAL_SETTINGS: JASyncLocalSettings = {
+	verboseS3Log: false,
 	s3: { ...DEFAULT_S3_SETTINGS },
 	vaultId: '',
 	syncPolicy: SyncPolicy.TwoWay,

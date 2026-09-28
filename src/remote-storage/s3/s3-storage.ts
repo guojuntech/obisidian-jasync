@@ -21,10 +21,15 @@ import {
 	validateRelativePath,
 	type S3Settings,
 } from './settings'
-import type { S3HttpResponse, S3Transport } from './transport'
+import type { S3HttpResponse, S3Transport, S3TransportEvent } from './transport'
 import {
 	describeS3Exception,
 	describeS3Response,
+	describeS3Request,
+	describeS3Headers,
+	describeS3VerboseResponse,
+	s3ApiName,
+	type S3DiagnosticOptions,
 	type S3ProbeContext,
 } from './diagnostics'
 
@@ -62,6 +67,7 @@ export class S3RemoteStorage extends RemoteStorage {
 	constructor(
 		settings: S3Settings,
 		private readonly transport: S3Transport,
+		private readonly diagnostics: S3DiagnosticOptions = {},
 	) {
 		super()
 		this.settings = normalizeS3Settings(settings)
@@ -710,45 +716,142 @@ export class S3RemoteStorage extends RemoteStorage {
 		probe?: S3ProbeContext,
 	): Promise<S3HttpResponse> {
 		const diagnosticId = crypto.randomUUID()
-		const secrets = [
+		const verbose = this.diagnostics.verbose?.() === true
+		const credentialSecrets = [
 			this.settings.accessKeyId,
 			this.settings.secretAccessKey,
 			this.settings.sessionToken,
+		]
+		const secrets = [
+			...credentialSecrets,
 			url.toString(),
 			url.pathname.length > 1 ? url.pathname : '',
 			url.pathname.length > 1 ? decodeURIComponent(url.pathname) : '',
 		]
 		for (let attempt = 0; ; attempt++) {
 			options.throwIfCancelled?.()
-			const signed = await this.signer.sign(url.toString(), {
+			const context = {
+				diagnosticId,
+				api: s3ApiName(method, url),
 				method,
-				headers,
-				body,
-				aws: { allHeaders: true },
-			})
+				attempt: attempt + 1,
+				...probe,
+			}
+			const signStarted = Date.now()
+			let signed: Request
+			try {
+				signed = await this.signer.sign(url.toString(), {
+					method,
+					headers,
+					body,
+					aws: { allHeaders: true },
+				})
+			} catch (error) {
+				if (verbose)
+					logger.warn('[S3] verbose signing failed', {
+						...context,
+						at: new Date().toISOString(),
+						elapsedMs: Date.now() - signStarted,
+						nativeError: describeS3Exception(error, secrets, true),
+					})
+				throw error
+			}
+			const signature = signed.headers
+				.get('authorization')
+				?.match(/Signature=([^\s,]+)/)?.[1]
+			const diagnosticSecrets = [
+				...credentialSecrets,
+				...(signature ? [signature] : []),
+			]
 			const signedHeaders: Record<string, string> = {}
 			signed.headers.forEach((value, key) => {
 				signedHeaders[key] = value
 			})
 			let response: S3HttpResponse
-			const context = { diagnosticId, method, attempt: attempt + 1, ...probe }
 			const started = Date.now()
-			if (probe) logger.debug('[S3] probe request started', context)
-			try {
-				response = await this.transport({
-					url: signed.url,
-					method,
-					headers: signedHeaders,
-					...(body === undefined ? {} : { body }),
+			const request = {
+				url: signed.url,
+				method,
+				headers: signedHeaders,
+				...(body === undefined ? {} : { body }),
+			}
+			if (verbose)
+				logger.debug('[S3] verbose request', {
+					...context,
+					at: new Date().toISOString(),
+					signingMs: started - signStarted,
+					region: this.settings.region,
+					addressing: this.settings.forcePathStyle ? 'path' : 'virtual-host',
+					...describeS3Request(request, diagnosticSecrets),
+					callStack: describeS3Exception(
+						new Error('S3 API call'),
+						diagnosticSecrets,
+						true,
+					)[0]?.stack,
 				})
+			if (probe) logger.debug('[S3] probe request started', context)
+			let transportState:
+				| Pick<
+						S3TransportEvent,
+						'stage' | 'state' | 'responseReceived' | 'httpStatus'
+				  >
+				| undefined
+			try {
+				response = await this.transport(
+					request,
+					verbose
+						? (event) => {
+								const { error, headers: responseHeaders, ...details } = event
+								transportState = {
+									stage: event.stage,
+									state: event.state,
+									responseReceived: event.responseReceived,
+									httpStatus: event.httpStatus,
+								}
+								logger.debug('[S3] verbose transport', {
+									...context,
+									at: new Date().toISOString(),
+									transport: 'obsidian.requestUrl',
+									...details,
+									...(responseHeaders
+										? {
+												headers: describeS3Headers(
+													responseHeaders,
+													diagnosticSecrets,
+												),
+											}
+										: {}),
+									...(error !== undefined
+										? {
+												nativeError: describeS3Exception(
+													error,
+													diagnosticSecrets,
+													true,
+												),
+											}
+										: {}),
+								})
+							}
+						: undefined,
+				)
 			} catch (error) {
-				const nativeError = describeS3Exception(error, secrets)
+				const nativeError = describeS3Exception(
+					error,
+					[...secrets, ...(signature ? [signature] : [])],
+					verbose,
+				)
 				const diagnostic = {
 					...context,
 					elapsedMs: Date.now() - started,
 					nativeError,
+					...(transportState ? { transportState } : {}),
 				}
-				logger.warn('[S3] native request failed (no HTTP response)', diagnostic)
+				logger.warn(
+					transportState?.responseReceived
+						? '[S3] native response processing failed'
+						: '[S3] native request failed (no HTTP response)',
+					diagnostic,
+				)
 				const detail =
 					nativeError
 						.map((entry) =>
@@ -776,6 +879,13 @@ export class S3RemoteStorage extends RemoteStorage {
 				elapsedMs: Date.now() - started,
 				...describeS3Response(response, secrets),
 			}
+			if (verbose)
+				logger.debug('[S3] verbose response', {
+					...context,
+					at: new Date().toISOString(),
+					elapsedMs: Date.now() - started,
+					...describeS3VerboseResponse(response, diagnosticSecrets),
+				})
 			if (probe) logger.debug('[S3] probe response', diagnostic)
 			else if (response.status >= 300)
 				logger.warn('[S3] HTTP request failed', diagnostic)
@@ -786,6 +896,13 @@ export class S3RemoteStorage extends RemoteStorage {
 				[429, 500, 502, 503, 504].includes(response.status) &&
 				attempt < 2
 			) {
+				if (verbose)
+					logger.debug('[S3] verbose retry scheduled', {
+						...context,
+						httpStatus: response.status,
+						delayMs: 200 * 2 ** attempt,
+						nextAttempt: attempt + 2,
+					})
 				await new Promise((resolve) =>
 					window.setTimeout(resolve, 200 * 2 ** attempt),
 				)

@@ -9,15 +9,55 @@ export async function exportsS3Diagnostics(app: App) {
 	const plugin = (
 		app as unknown as { plugins: { plugins: Record<string, JASyncPlugin> } }
 	).plugins.plugins.jasync
-	const original = plugin.localSettings
+	const original = structuredClone(plugin.localSettings)
 	const secrets = [
 		'diagnostic-access-key',
 		'diagnostic/secret+key=',
 		'diagnostic-session-token',
 	]
 	try {
+		assert(
+			plugin.localSettings.verboseS3Log !== true,
+			'Verbose logging must default off',
+		)
+		plugin.settingTab.display()
+		const tab =
+			plugin.settingTab.containerEl.querySelectorAll<HTMLButtonElement>(
+				'.ns-settings-tab',
+			)[1]
+		assert(tab, 'Missing troubleshooting tab')
+		tab.click()
+		await plugin.settingTab.troubleshootingSettings.display()
+		const item = Array.from(
+			plugin.settingTab.containerEl.querySelectorAll('.setting-item'),
+		).find((el) => el.textContent?.includes('Verbose log'))
+		const toggle = item?.querySelector<HTMLElement>('.checkbox-container')
+		assert(toggle, 'Verbose log toggle is missing from Troubleshoot')
+		// This harness renders the setting tab off-screen; use its native keyboard
+		// interaction because a detached label cannot activate its checkbox.
+		toggle.dispatchEvent(
+			new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
+		)
+		const settingsPath = `${plugin.manifest.dir}/data.local.json`
+		let persisted = false
+		for (let attempt = 0; attempt < 50; attempt++) {
+			await new Promise((resolve) => window.setTimeout(resolve, 20))
+			const stored = JSON.parse(await app.vault.adapter.read(settingsPath)) as {
+				verboseS3Log?: boolean
+			}
+			if (stored.verboseS3Log === true) {
+				persisted = true
+				break
+			}
+		}
+		assert(persisted, 'Verbose toggle was not saved to local settings')
+		await plugin.settingsService.loadLocalSettings()
+		assert(
+			Boolean(plugin.localSettings.verboseS3Log),
+			'Verbose toggle did not survive settings reload',
+		)
 		plugin.localSettings = {
-			...original,
+			...plugin.localSettings,
 			s3: {
 				...original.s3,
 				endpoint: 'https://storage.example.test',
@@ -88,6 +128,13 @@ export async function exportsS3Diagnostics(app: App) {
 		assert(file, 'Troubleshoot did not export logs to a note')
 		const content = await app.vault.read(file)
 		for (const marker of [
+			'Verbose S3 log: true',
+			'verbose request',
+			'verbose response',
+			'PutObject',
+			'objectPath',
+			'credentialScope',
+			'[redacted]',
 			'Platform:',
 			'Obsidian API version:',
 			'native request failed',
@@ -103,5 +150,6 @@ export async function exportsS3Diagnostics(app: App) {
 			assert(!content.includes(secret), 'Export leaked a configured credential')
 	} finally {
 		plugin.localSettings = original
+		await plugin.settingsService.saveLocalSettings()
 	}
 }
