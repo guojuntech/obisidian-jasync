@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-jasync",
-	"version": "0.2.12",
+	"version": "1.0.0",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

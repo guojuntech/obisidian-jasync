@@ -1,12 +1,20 @@
-# Implementation notes — 2026-09-28
+# Implementation notes — 2026-10-03
 
 ## Delivered scope
 
-JASync 0.2.12 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
+JASync 1.0.0 executes S3 synchronization: manual plan approval, file selection, uploads, downloads, conditional overwrites/deletes, common-base text merging, conflict copies, recovery backups, per-file history, progress and cancellation. The production coordinator is `src/sync/safe/runner.ts`; it does not call the retained upstream task executor. The RemoteStorage abstraction remains provider-independent.
 
 Nutstore account services, SSO, WebDAV, delta/cache backend and hosted AI gateway are removed. The AI settings tab and ChatBox ribbon button remain hidden. The AI conflict-resolution header action is disabled by removing service registration and settings refresh hooks. Prefix is the single remote root setting; Path Style defaults to off.
 
 The sync progress window keeps Stop sync visible but disabled and gray in terminal states. Successful completion gives Close a green background and white text; active sync restores the red Stop sync and neutral Hide controls.
+
+## 1.0.0 — Release and community submission preparation
+
+Version 1.0.0 promotes the existing 0.2.12 runtime without changing plugin identity, settings, synchronization semantics or recovery data. The manifest description and README explain the S3 workflow, external services, credential storage and retained optional AI/MCP network usage. Source attribution and AGPL-3.0 remain intact.
+
+The GitHub tag/release and official community-directory registration are separate actions. Current directory policy requires public written upstream approval for a fork as well as submission through a linked Obsidian/GitHub account. Directory availability is not claimed before acceptance. Android/iOS end-to-end device validation remains outstanding.
+
+Validation for 1.0.0: 71 unit files / 903 tests, 19 native desktop Obsidian checks, ESLint, TypeScript, production build and exact five-file ZIP comparison passed. Native tests use the final 1.0.0 production bundle in a temporary vault. No new live-cloud or physical mobile-device acceptance is claimed.
 
 ## 0.2.12 — Disable the AI conflict action and clarify completion controls
 

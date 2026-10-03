@@ -1,8 +1,10 @@
 # JASync
 
-Just another S3 sync plugin for Obsidian. 基于 Obsidian Nutstore Sync 的同步交互，采用 Alipan RemoteStorage 抽象方式开发的 **S3-only** 插件。插件 ID 和安装目录统一使用 `jasync`。
+Just another S3 sync plugin for Obsidian. Preview and select changes before syncing notes with S3-compatible storage, with conflict handling and local recovery backups.
 
-**截至 2026-10-03，当前代码与已发布版本为 [0.2.12](https://github.com/guojuntech/obisidian-jasync/releases/tag/0.2.12)。** 已实现可执行的 S3 同步：扫描、比较、预览并勾选文件，确认后执行上传、下载、覆盖、删除和冲突处理。移动端兼容修复持续推进，Android / iOS 完整同步仍待实机验收。
+基于 Obsidian Nutstore Sync 的同步交互，采用 Alipan RemoteStorage 抽象方式开发的 **S3-only** 插件。插件 ID 和安装目录统一使用 `jasync`。
+
+**截至 2026-10-03，当前版本为 [1.0.0](https://github.com/guojuntech/obisidian-jasync/releases/tag/1.0.0)。** 已实现可执行的 S3 同步：扫描、比较、预览并勾选文件，确认后执行上传、下载、覆盖、删除和冲突处理。移动端兼容修复持续推进，Android / iOS 完整同步仍待实机验收。
 
 ## 当前进展
 
@@ -23,6 +25,7 @@ Just another S3 sync plugin for Obsidian. 基于 Obsidian Nutstore Sync 的同�
 
 | 版本 | 主要进展 |
 | --- | --- |
+| [1.0.0](docs/releases/1.0.0.md) | 将既有 S3 同步实现发布为 1.0.0，补齐社区提交所需的网络使用说明；插件身份和数据格式保持不变。 |
 | [0.2.12](docs/releases/0.2.12.md) | 停用 AI 冲突按钮，完善同步完成后的按钮状态与颜色。 |
 | [0.2.11](docs/releases/0.2.11.md) | Android HEAD 在原生层丢失响应时，针对特定 `Stream closed` 异常补发 `GET Range: bytes=0-0`；保留真实状态、对象大小和版本检查。 |
 | [0.2.10](docs/releases/0.2.10.md) | 增加可即时开关的 S3 详细日志，覆盖成功 / 失败请求及原生处理阶段。 |
@@ -32,9 +35,11 @@ Just another S3 sync plugin for Obsidian. 基于 Obsidian Nutstore Sync 的同�
 
 ## 安装与升级
 
+GitHub Release 可独立安装；Obsidian 官方社区目录注册尚未完成，不能据此在应用内搜索安装。
+
 最低 Obsidian 版本为 **1.7.2**。通过 BRAT 添加仓库 **`guojuntech/obisidian-jasync`**，选择已发布版本并启用 JASync。注意 GitHub 仓库名中的拼写是 `obisidian`。
 
-手动安装可从 [0.2.12 Release](https://github.com/guojuntech/obisidian-jasync/releases/tag/0.2.12) 下载 `jasync-0.2.12.zip`，解压到笔记库的 `.obsidian/plugins/`。结构应为：
+手动安装可从 [1.0.0 Release](https://github.com/guojuntech/obisidian-jasync/releases/tag/1.0.0) 下载 `jasync-1.0.0.zip`，解压到笔记库的 `.obsidian/plugins/`。结构应为：
 
 ```text
 .obsidian/plugins/jasync/
@@ -72,9 +77,17 @@ Just another S3 sync plugin for Obsidian. 基于 Obsidian Nutstore Sync 的同�
 
 Android 上仅在 HEAD 请求尚未交付响应、且出现特定 `Request Failed. IOException Stream closed` 异常时自动补查，不依赖 Verbose log。补查的真实 404 才按不存在处理；403 等错误仍会失败。服务端忽略 Range 时，补查可能下载整个对象。日志字段与定位方法见 [S3 诊断指南](docs/S3-DIAGNOSTICS.md)。
 
+## 网络使用、账号与数据
+
+JASync 本身免费，不要求 JASync 或坚果云账号。S3 同步需要自行提供存储服务及凭据；云服务账号、存储和流量费用由所选服务提供商决定。
+
+- **S3**：仅向配置的 Endpoint（或按 Region 确定的 AWS S3 地址）发送签名请求，用于连接检查、列举、读写删除以及随机私有对象的能力探测；文件名和选中的文件内容会发送到该存储服务。检查连接只验证访问，真正的同步写删由已确认计划或主动开启的自动同步触发。
+- **保留的 AI/MCP 功能**：AI 设置页和左侧 ChatBox 入口当前隐藏，AI 冲突按钮停用，但通用代码及命令仍保留。用户配置并使用 AI 时，会把对话、附加上下文和工具结果发送到指定模型服务；启用的 MCP 服务会在加载配置时连接所配置的服务器，工具调用将参数发送到该服务器。手动刷新模型目录时访问 `https://models.dev/api.json`。这些功能不属于 S3 同步的必要条件，可能需要第三方账号或付费 API。
+- **本地数据**：配置、同步记录和恢复副本存放在当前 vault 的插件目录；S3 凭据保存在未加密的 `data.local.json`。诊断日志保存在内存，用户导出后写入 vault 的 `jasync/logs/`。插件未添加客户端遥测或广告。
+
 ## 验证状态与剩余工作
 
-[0.2.12 发布记录](docs/releases/0.2.12.md)记载：**71 个单元测试文件 / 903 项测试、19 项原生桌面 Obsidian 检查**，以及 ESLint、TypeScript、生产构建和 ZIP 五文件内容校验通过。生产包检查包含无 Node 全局对象的浏览器环境、实际界面控件和日志导出。
+[1.0.0 发布验证](docs/releases/1.0.0.md)：**71 个单元测试文件 / 903 项测试、19 项原生桌面 Obsidian 检查**，以及 ESLint、TypeScript、生产构建和 ZIP 五文件内容校验通过。生产包检查包含无 Node 全局对象的浏览器环境、实际界面控件和日志导出。
 
 [0.2.11 实施记录](docs/IMPLEMENTATION.md#0211--android-head-response-compatibility)另记录 **7 个真实 COS 场景**通过；其中 Android 原生 HEAD 响应丢失边界采用模拟，不能等同于手机实机测试。这些是已记录的版本验收范围，并非所有 S3 服务的兼容承诺。
 
