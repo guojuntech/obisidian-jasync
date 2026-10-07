@@ -4,7 +4,7 @@ Just another S3 sync plugin for Obsidian. Preview and select changes before sync
 
 基于 Obsidian Nutstore Sync 的同步交互，采用 Alipan RemoteStorage 抽象方式开发的 **S3-only** 插件。插件 ID 和安装目录统一使用 `jasync`。
 
-**截至 2026-10-03，当前版本为 [1.0.0](https://github.com/guojuntech/obisidian-jasync/releases/tag/1.0.0)。** 已实现可执行的 S3 同步：扫描、比较、预览并勾选文件，确认后执行上传、下载、覆盖、删除和冲突处理。移动端兼容修复持续推进，Android / iOS 完整同步仍待实机验收。
+**截至 2026-10-07，当前版本为 [1.0.1](https://github.com/guojuntech/obisidian-jasync/releases/tag/1.0.1)。** 已实现可执行的 S3 同步：扫描、比较、预览并勾选文件，确认后执行上传、下载、覆盖、删除和冲突处理。移动端兼容修复持续推进，Android / iOS 完整同步仍待实机验收。
 
 ## 当前进展
 
@@ -25,6 +25,7 @@ Just another S3 sync plugin for Obsidian. Preview and select changes before sync
 
 | 版本 | 主要进展 |
 | --- | --- |
+| [1.0.1](docs/releases/1.0.1.md) | 当前文件名区域保留一行高度，修复文件切换和同步结束时的进度窗口抖动。 |
 | [1.0.0](docs/releases/1.0.0.md) | 将既有 S3 同步实现发布为 1.0.0，补齐社区提交所需的网络使用说明；插件身份和数据格式保持不变。 |
 | [0.2.12](docs/releases/0.2.12.md) | 停用 AI 冲突按钮，完善同步完成后的按钮状态与颜色。 |
 | [0.2.11](docs/releases/0.2.11.md) | Android HEAD 在原生层丢失响应时，针对特定 `Stream closed` 异常补发 `GET Range: bytes=0-0`；保留真实状态、对象大小和版本检查。 |
@@ -39,7 +40,7 @@ GitHub Release 可独立安装；Obsidian 官方社区目录注册尚未完成�
 
 最低 Obsidian 版本为 **1.7.2**。通过 BRAT 添加仓库 **`guojuntech/obisidian-jasync`**，选择已发布版本并启用 JASync。注意 GitHub 仓库名中的拼写是 `obisidian`。
 
-手动安装可从 [1.0.0 Release](https://github.com/guojuntech/obisidian-jasync/releases/tag/1.0.0) 下载 `jasync-1.0.0.zip`，解压到笔记库的 `.obsidian/plugins/`。结构应为：
+手动安装可从 [1.0.1 Release](https://github.com/guojuntech/obisidian-jasync/releases/tag/1.0.1) 下载 `jasync-1.0.1.zip`，解压到笔记库的 `.obsidian/plugins/`。结构应为：
 
 ```text
 .obsidian/plugins/jasync/

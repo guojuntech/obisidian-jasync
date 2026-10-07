@@ -1,7 +1,7 @@
 {
 	"id": "jasync",
 	"name": "JASync",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.7.2",
 	"description": "Sync notes with S3-compatible storage, preview changes, resolve conflicts, and keep recovery backups.",
 	"author": "guojuntech",
