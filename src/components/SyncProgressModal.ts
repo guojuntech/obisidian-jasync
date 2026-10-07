@@ -111,15 +111,15 @@ export default class SyncProgressModal extends Modal {
 			'jasync-progress-modal--preparing',
 			state === 'preparing',
 		)
-		const hasStatusDetails =
-			state === 'preparing'
-				? Boolean(
-						preparation?.files?.currentPath ||
-						preparation?.traversal?.currentPath ||
-						preparationText?.detail,
-					)
-				: state === 'syncing' && progress.current !== null
-		if (hasStatusDetails) {
+		// Keep the filename row in the layout between files and after sync ends.
+		const showStatusSection =
+			state !== 'preparing' ||
+			Boolean(
+				preparation?.files?.currentPath ||
+					preparation?.traversal?.currentPath ||
+					preparationText?.detail,
+			)
+		if (showStatusSection) {
 			this.statusSection.show()
 		} else {
 			this.statusSection.hide()
