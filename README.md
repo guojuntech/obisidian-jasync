@@ -8,31 +8,31 @@ Just another S3 sync plugin for Obsidian. Preview and select changes before sync
 
 ## 当前进展
 
-| 方向 | 当前状态 |
-| --- | --- |
-| S3 后端 | 支持 Endpoint、Region、Bucket、Prefix、临时令牌及两种寻址方式；Prefix 是唯一远端根目录，Path Style 默认关闭。 |
-| 同步策略 | 支持双向、仅发送、仅接收，以及覆盖远端 / 还原本地策略；提供文件筛选、冲突处理和逐文件同步记录。 |
-| 执行保护 | 完整分页与内容比较、可勾选计划、目标及版本复核、条件写删能力探测、覆盖 / 删除前恢复备份；失败或取消不把未完成项目记为已同步。 |
-| 性能与进度 | 扫描、比较、复核、传输及记录维护持续显示进度；已有匹配基准的未变化文件跳过重复 Recheck / Verify。 |
-| Android 兼容 | 已修复启动时的 `Buffer is not defined`；删除探测改用 GET 验证，特定 HEAD 原生异常可通过 Range GET 补查。已有隔离环境回归，尚未完成 Android 真机验收。 |
-| 排障 | 支持日志导出、请求关联 ID、S3/COS 错误信息及默认关闭的 Verbose log；可区分原生请求、响应元数据和响应正文读取失败。 |
-| 界面 | 使用 JA 同步图标；同步结束后 Stop sync 保持可见但灰色禁用，成功后的 Close 为绿色白字。AI 设置页和 ChatBox 左侧入口隐藏，笔记顶部 AI 冲突处理按钮停用。 |
-| 分发 | GitHub Release 提供 BRAT 所需独立文件、手动安装 ZIP 和 SHA-256 清单；Tag 发布工作流校验版本、测试、构建及安装包内容。 |
+| 方向         | 当前状态                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| S3 后端      | 支持 Endpoint、Region、Bucket、Prefix、临时令牌及两种寻址方式；Prefix 是唯一远端根目录，Path Style 默认关闭。                                          |
+| 同步策略     | 支持双向、仅发送、仅接收，以及覆盖远端 / 还原本地策略；提供文件筛选、冲突处理和逐文件同步记录。                                                        |
+| 执行保护     | 完整分页与内容比较、可勾选计划、目标及版本复核、条件写删能力探测、覆盖 / 删除前恢复备份；失败或取消不把未完成项目记为已同步。                          |
+| 性能与进度   | 扫描、比较、复核、传输及记录维护持续显示进度；已有匹配基准的未变化文件跳过重复 Recheck / Verify。                                                      |
+| Android 兼容 | 已修复启动时的 `Buffer is not defined`；删除探测改用 GET 验证，特定 HEAD 原生异常可通过 Range GET 补查。已有隔离环境回归，尚未完成 Android 真机验收。  |
+| 排障         | 支持日志导出、请求关联 ID、S3/COS 错误信息及默认关闭的 Verbose log；可区分原生请求、响应元数据和响应正文读取失败。                                     |
+| 界面         | 使用 JA 同步图标；同步结束后 Stop sync 保持可见但灰色禁用，成功后的 Close 为绿色白字。AI 设置页和 ChatBox 左侧入口隐藏，笔记顶部 AI 冲突处理按钮停用。 |
+| 分发         | GitHub Release 提供 BRAT 所需独立文件、手动安装 ZIP 和 SHA-256 清单；Tag 发布工作流校验版本、测试、构建及安装包内容。                                  |
 
 坚果云 SSO、WebDAV、增量接口、远端缓存和 AI 网关已移除；通用 AI/MCP 代码仍保留。详细架构与执行边界见 [DESIGN.md](DESIGN.md)。
 
 ### 最近版本
 
-| 版本 | 主要进展 |
-| --- | --- |
-| [1.0.1](docs/releases/1.0.1.md) | 当前文件名区域保留一行高度，修复文件切换和同步结束时的进度窗口抖动。 |
-| [1.0.0](docs/releases/1.0.0.md) | 将既有 S3 同步实现发布为 1.0.0，补齐社区提交所需的网络使用说明；插件身份和数据格式保持不变。 |
-| [0.2.12](docs/releases/0.2.12.md) | 停用 AI 冲突按钮，完善同步完成后的按钮状态与颜色。 |
+| 版本                              | 主要进展                                                                                                                      |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [1.0.1](docs/releases/1.0.1.md)   | 当前文件名区域保留一行高度，修复文件切换和同步结束时的进度窗口抖动。                                                          |
+| [1.0.0](docs/releases/1.0.0.md)   | 将既有 S3 同步实现发布为 1.0.0，补齐社区提交所需的网络使用说明；插件身份和数据格式保持不变。                                  |
+| [0.2.12](docs/releases/0.2.12.md) | 停用 AI 冲突按钮，完善同步完成后的按钮状态与颜色。                                                                            |
 | [0.2.11](docs/releases/0.2.11.md) | Android HEAD 在原生层丢失响应时，针对特定 `Stream closed` 异常补发 `GET Range: bytes=0-0`；保留真实状态、对象大小和版本检查。 |
-| [0.2.10](docs/releases/0.2.10.md) | 增加可即时开关的 S3 详细日志，覆盖成功 / 失败请求及原生处理阶段。 |
-| [0.2.9](docs/releases/0.2.9.md) | 删除能力探测改用 GET 确认对象消失，必须收到明确的 HTTP 404 才通过。 |
-| [0.2.8](docs/releases/0.2.8.md) | 增加 S3 请求诊断和日志笔记导出。 |
-| [0.2.7](docs/releases/0.2.7.md) | 移除导致 Android 启动失败的 XML 校验依赖链，补充无 Node 全局对象的回归检查。 |
+| [0.2.10](docs/releases/0.2.10.md) | 增加可即时开关的 S3 详细日志，覆盖成功 / 失败请求及原生处理阶段。                                                             |
+| [0.2.9](docs/releases/0.2.9.md)   | 删除能力探测改用 GET 确认对象消失，必须收到明确的 HTTP 404 才通过。                                                           |
+| [0.2.8](docs/releases/0.2.8.md)   | 增加 S3 请求诊断和日志笔记导出。                                                                                              |
+| [0.2.7](docs/releases/0.2.7.md)   | 移除导致 Android 启动失败的 XML 校验依赖链，补充无 Node 全局对象的回归检查。                                                  |
 
 ## 安装与升级
 
@@ -125,13 +125,14 @@ corepack pnpm@9.15.9 run test:obsidian
 corepack pnpm@9.15.9 run test:obsidian -- --native
 ```
 
-发布时同步更新 package.json、manifest.json、versions.json，并添加 `docs/releases/<version>.md`。推送同名版本 Tag 后，GitHub Actions 使用冻结锁文件运行测试和构建，核对 ZIP、生成 SHA-256 清单并发布 Release。普通分支 push 不发布安装包。
+发布时同步更新 package.json、manifest.json、versions.json，在 [CHANGELOG.md](CHANGELOG.md) 顶部记录版本日期和主要变更，并添加 `docs/releases/<version>.md`。推送同名版本 Tag 后，GitHub Actions 使用冻结锁文件运行测试和构建，核对 ZIP、生成 SHA-256 清单并发布 Release。普通分支 push 不发布安装包。
 
 ## 文档、来源与许可
 
 - [设计与实现状态](DESIGN.md)
 - [实施记录、执行保障与恢复方法](docs/IMPLEMENTATION.md)
 - [S3 诊断指南](docs/S3-DIAGNOSTICS.md)
+- [更新日志](CHANGELOG.md)
 - [版本说明](docs/releases/)
 
 保留 AGPL-3.0 许可及来源说明，见 [LICENSE](LICENSE) 和 [NOTICE.md](NOTICE.md)。

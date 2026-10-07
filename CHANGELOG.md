@@ -1,8 +1,24 @@
-# Changelog
+# JASync 更新日志
 
-本项目的所有重要更改都将记录在此文件中。All notable changes to this project will be documented in this file.
+记录 JASync 的主要变更，最新版本在前。发布时更新本文件，并在 `docs/releases/<version>.md` 中补充安装说明和验证结果。
 
-## [1.5.0] - 2026-09-08
+## [1.0.1](docs/releases/1.0.1.md) - 2026-10-07
+
+- 修复同步进度窗口在文件切换和同步结束时抖动的问题：当前文件名区域保留一行高度，文件结束时清空文字，下一项开始时显示新的文件名。
+- 长文件名继续在单行内省略显示；预备阶段没有状态详情时仍保持紧凑布局。
+
+## [1.0.0](docs/releases/1.0.0.md) - 2026-10-03
+
+- 将 0.2.12 的既有 S3 同步实现发布为 1.0.0，保留同步计划预览、文件筛选、冲突处理和本地恢复备份等功能。
+- 补齐社区提交所需的网络使用、账号、凭据和本地数据说明；插件 ID 继续使用 `jasync`，同步行为和设置、恢复数据格式保持不变。
+
+## 上游历史：Obsidian Nutstore Sync
+
+以下保留原项目的更新记录。版本号属于 [Obsidian Nutstore Sync](https://github.com/nutstore/obsidian-nutstore-sync)，与 JASync 独立编号。
+
+<!-- prettier-ignore-start -->
+
+### [1.5.0] - 2026-09-08
 
 - 引入子代理（Subagent）设置、模型选择回退机制及长期记忆归档功能。 | Introduced subagent settings, model selection resolution with fallback, and long-term memory archive injection.
 - 在同步决策中集成文件变更检测逻辑，并重构同步进度弹窗与策略描述。 | Added file change detection to sync processes and refactored sync progress modals and policy descriptions.
@@ -17,14 +33,14 @@
 - 重构代理循环状态机，并优化 UnoCSS 配置与构建插件。 | Refactored agent loop state machine and optimized UnoCSS configuration and build plugins.
 
 
-## [1.4.2] - 2026-08-21
+### [1.4.2] - 2026-08-21
 
 - 修复移动端设备下编辑器样式的过滤问题 | fix: filter editor style in small screen devices
 - 移除 `note_neighborhood` 工具及其相关测试用例 | refactor: remove note_neighborhood tool and related tests
 - 重构旧版过滤规则迁移函数，移除冗余的类型断言 | refactor: remove unnecessary type assertions in migrateLegacyFilterRules
 
 
-## [1.4.1] - 2026-08-20
+### [1.4.1] - 2026-08-20
 
 - 在默认忽略规则中添加 `.nomedia` 文件支持。 Add `.nomedia` to default ignore rules.
 - 确保文件夹列表遍历失败时立即中止，防止扫描结果不完整。 Ensure traversal aborts on folder listing failures to prevent incomplete scans.
@@ -41,7 +57,7 @@
 - 实现基于 gitignore 风格的统一有序过滤规则列表。 Implement gitignore-style filter rules with a unified ordered list.
 
 
-## [1.4.0] - 2026-08-07
+### [1.4.0] - 2026-08-07
 
 - 增强坚果云同步指南与内置技能结构 | Enhanced Nutstore Sync guide and built-in skills structure.
 - 优化插件路径管理，改进临时文件处理逻辑 | Optimized path management and refactored temporary file handling.
@@ -64,7 +80,7 @@
 - 修复了侧边栏焦点切换时的上下文保留问题及路径处理等稳定性问题 | Fixed context preservation on sidebar focus and other stability issues.
 
 
-## [1.3.1] - 2026-07-10
+### [1.3.1] - 2026-07-10
 
 - 将超大 Bash 输出重定向至临时文件，并共享临时文件系统 | Redirect oversized bash output to temp file and share scratch FS
 - 在决策逻辑中添加文件大小检查，以加强删除操作的保护 | Add file-size guard to remove operations in deciders
@@ -80,7 +96,7 @@
 - 实现“笔记邻域”检索工具 | Implement note neighborhood tool
 
 
-## [1.3.0] - 2026-06-30
+### [1.3.0] - 2026-06-30
 
 - 增加对 Anthropic AI 提供商的原生支持 | Added native support for Anthropic AI provider.
 - 增加坚果云企业版自定义基础 URL 支持及坚果云 LLM 网关集成 | Added support for Nutstore Enterprise custom base URL and integrated Nutstore LLM Gateway.
@@ -99,7 +115,7 @@
 - 修复 CI 流程：恢复发布日志中的日期显示，并更新 pnpm 版本 | Fixed CI workflows: restored release dates in changelog and updated pnpm version.
 
 
-## [1.2.2] - 2026-05-07
+### [1.2.2] - 2026-05-07
 
 - 重构同步机制：将手动与边栏触发统一由 `SyncExecutorService` 管理，并增加并发保护防止重复触发 (Refactor sync mechanism: funnel manual/ribbon triggers through `SyncExecutorService` and add single-flight guard)
 - 修复了无法选择和复制消息文本的问题 (#128) (Fix: allow selecting and copying message text (#128))
@@ -107,7 +123,7 @@
 - 重构路径访问逻辑：常规路径使用 Vault API，隐藏路径使用 Adapter API (Refactor: use Vault API for regular paths and Adapter API for hidden paths)
 
 
-## [1.2.1] - 2026-04-29
+### [1.2.1] - 2026-04-29
 
 - 修复未选择会话时的默认模型应用问题 | Fixed default model application for empty unselected sessions.
 - 修复对话模型显示名称记录问题，并确保任务运行使用模型 ID | Fixed chat model display name recording and ensured model IDs are used for task runs.
@@ -116,7 +132,7 @@
 - 新增聊天框功能区 (Ribbon) | Added a new ribbon interface for the chatbox.
 
 
-## [1.2.0] - 2026-04-28
+### [1.2.0] - 2026-04-28
 
 - 新增 AI 助手主流程与 Agent loop，支持多轮任务执行、会话管理、任务状态展示，以及消息删除、重新生成、召回与复制等交互。 / Added the core AI assistant flow and Agent loop, including multi-step task execution, session management, task status views, and message actions such as delete, regenerate, recall, and copy.
 - 新增 AI Provider 配置与管理能力，完善模型与提供商设置结构、必填/选填提示、校验与错误处理，并加入权限确认弹窗与可逆操作保护。 / Added AI provider configuration and management, with reworked model/provider settings, required or optional field indicators, stronger validation and error handling, plus a permission modal and safeguards for reversible operations.
@@ -125,7 +141,7 @@
 - 优化聊天与命令界面体验，加入可拖拽输入区、命令按钮图标、聊天消息卡片与历史任务面板，提升 AI 交互可用性。 / Improved the chat and command UI with a resizable input pane, command button icons, chat message cards, and session task panels for a better AI experience.
 - 改进同步冲突处理与文件操作能力，引入 DiffMatchPatchOrSkip 策略，并增强本地 Vault 文件操作与搜索路径过滤等底层支持。 / Improved conflict resolution and file operations with the new DiffMatchPatchOrSkip strategy, alongside stronger local vault handling and search path filtering support.
 
-## [1.1.3] - 2026-02-14
+### [1.1.3] - 2026-02-14
 
 - 优化了设置访问的稳定性和错误处理。
 - 优化账户同步流程：在同步前增加配置校验，引导用户前往设置页面。
@@ -133,21 +149,21 @@
 - Enhanced account sync workflow: Added configuration validation before sync and guided users to settings page.
 
 
-## [1.1.2] - 2026-02-11
+### [1.1.2] - 2026-02-11
 
 - **新增对 traverseWebDAV 缓存清理的支持**
 - **Added support for clearing the traverseWebDAV cache**
 
 
-## [1.1.1] - 2026-02-10
+### [1.1.1] - 2026-02-10
 
 - 修复：增强了 HTML 实体解码支持，提升了对特殊字符的处理能力。
 - Fix: Enhanced HTML entity decoding support, improving special character handling.
 
 
-## [1.1.0] - 2026-02-05
+### [1.1.0] - 2026-02-05
 
-### 新增功能 / Features
+#### 新增功能 / Features
 - 新增可恢复的 WebDAV 遍历功能，支持大规模目录树的高效扫描。
 - 新增失败任务弹窗，集中展示同步错误信息。
 - 新增同步准备事件，提供更细致的同步状态反馈。
@@ -163,7 +179,7 @@
 - Added more task icons to enrich visual feedback for task types.
 - Added skip reason display (file size, ignored items, etc.) to improve sync transparency.
 
-### 修复 / Fixes
+#### 修复 / Fixes
 - 修复同步进度弹窗按钮未定义的问题。
 - 修复 FilterEditorModal 描述显示问题。
 - 修复文件大小限制判断逻辑。
@@ -183,7 +199,7 @@
 - Fixed resumable traverse return value.
 - Fixed filename validity check before remote directory creation.
 
-### 重构与优化 / Refactoring & Improvements
+#### 重构与优化 / Refactoring & Improvements
 - 重构并增强 glob 匹配逻辑，改进路径标准化。
 - 重构 delta 应用逻辑，新增 applyDeltasToStats 工具函数。
 - 移除 delta 缓存键值存储，简化架构。
@@ -196,7 +212,7 @@
 - Changed language setting from Obsidian API to plugin settings configuration.
 
 
-## [1.0.0] - 2025-12-29
+### [1.0.0] - 2025-12-29
 
 - 功能: 分块执行同步任务并新增批量远端操作（批量建目录、递归删除）、覆盖推送与跳过冲突，显著提升大批量同步效率。/ Feature: Execute sync jobs in chunks with new batch remote operations (bulk mkdir, recursive delete), overwrite push, and conflict skipping to speed up large syncs.
 - 功能: 扩展 glob 规则和路径判定（Mergeable、Markdown、二进制文件），自动排除 configDir，并支持禁用间隔自动同步，增强策略可控性。/ Feature: Extended glob rules and path detection (mergeable, markdown, binary), auto-exclusion of configDir, and ability to disable interval auto sync for finer control.
@@ -204,14 +220,14 @@
 - 修复: 保护忽略文件不被远端删除、修复缓存服务、记录跳过、进度上报与任务分块等问题，保证同步稳定性。/ Fix: Safeguarded ignored files from remote deletion and fixed cache service, record skipping, progress reporting, and chunked task handling to keep sync stable.
 - 优化: 使用 `fflate` 压缩缓存、以 SWC 支持 ES5、改进 ArrayBuffer 转换与时长 clamping，提供更快更兼容的运行体验。/ Improvement: Switched to `fflate` caching, compile with SWC for ES5 support, and improved ArrayBuffer conversion plus duration clamping for faster, more compatible runtime.
 
-## [0.8.5] - 2025-12-02
+### [0.8.5] - 2025-12-02
 
 - 功能: 允许跳过初始同步确认。/ Feature: Allow skipping initial sync confirmation.
 - 修复: 移除无用的卸载服务进程。/ Fix: Remove useless unload service process.
 - 优化: 优化记录更新的防抖性能。/ Refactor: Debounce record updates for performance.
 
 
-## [0.8.4] - 2025-08-06
+### [0.8.4] - 2025-08-06
 
 * **改进:**  实现了可配置的自动同步间隔。
 * **修复:**  删除了孤立的记录。
@@ -221,13 +237,13 @@
 * **Internal Improvements:** Refactored sync decision architecture and added comprehensive glob matching tests; Decoupled and refactored the `SyncRecord` class for improved maintainability; Improved `StatModel` type safety and fixed related type issues; Used `path-browserify` for better compatibility.
 
 
-## [0.8.3] - 2025-07-21
+### [0.8.3] - 2025-07-21
 
 * 优化二进制文件检测：通过扩展名检查优化了二进制文件的检测。
 * Optimized binary file detection: Improved binary file detection with extension checking.
 
 
-## [0.8.2] - 2025-06-26
+### [0.8.2] - 2025-06-26
 
 * **改进:** 提升了文件处理的稳定性，修复了 `PullTask` 执行方法中的错误。
 * **改进:**  改进了 `deepStringify` 函数的错误处理，使其能够更好地处理 `Error` 对象。
@@ -235,7 +251,7 @@
 * **Improvements:** Improved error handling in the `deepStringify` function to better manage `Error` objects.
 
 
-## [0.8.1] - 2025-06-25
+### [0.8.1] - 2025-06-25
 
 * **改进与修复:**
     * 更新了文件检索方法，提高了效率和稳定性。
@@ -247,7 +263,7 @@
     * Enhanced robustness of language retrieval method to prevent potential runtime errors.
 
 
-## [0.8.0] - 2025-06-23
+### [0.8.0] - 2025-06-23
 
 * **改进:**
     * 优化同步流程，避免同步进度条被意外清空。
@@ -271,7 +287,7 @@
     * Optimized timer management using `window.clearTimeout` and `window.setTimeout`.
 
 
-## [0.7.0] - 2025-05-14
+### [0.7.0] - 2025-05-14
 
 *   **特性**
     *   增强智能合并策略，提升冲突解决效率。
@@ -287,12 +303,12 @@
     *   Improved stability of the `updateMtimeInRecord` method by adding error handling.
     *   Ensured compatibility with versions 1.8.x and earlier.
 
-## [0.6.1] - 2025-05-13
+### [0.6.1] - 2025-05-13
 
 *   改进 Glob 匹配逻辑和性能 (重构文件系统结构)
 *   Improve glob matching logic and performance (Refactored filesystem structure)
 
-## [0.6.0] - 2025-05-09
+### [0.6.0] - 2025-05-09
 
 *   **新功能**
     *   解码文件路径中的 HTML Entity 编码
@@ -306,7 +322,7 @@
     *   Suppress notifications during automatic synchronization
     *   Add filter rule settings with support for include and exclude rules
 
-## [0.5.1] - 2025-04-30
+### [0.5.1] - 2025-04-30
 
 * 修复：修复了 NutstorePlugin 类型不存在 'logs' 属性的问题。
 * Fixed: Resolved an issue where the 'logs' property was missing from the NutstorePlugin type.
@@ -327,7 +343,7 @@
     * Added configDir to the filter rules.
 
 
-## [0.4.2] - 2025-04-28
+### [0.4.2] - 2025-04-28
 
 * 修复：优化实时保存同步记录功能，避免同步大量文件中断后需要重新读写。
 * 修复：处理空目录或根目录情况。
@@ -337,13 +353,13 @@
 * Fixed: Improved WebDAV connection check to handle 503 errors and provide corresponding notifications.
 
 
-## [0.4.1] - 2025-04-27
+### [0.4.1] - 2025-04-27
 
 * 修复了首次同步时本地数据会覆盖远程数据的问题，现在会进行合并。
 * Fixed an issue where local data would overwrite remote data during the initial synchronization. Now, the data will be merged.
 
 
-## [0.4.0] - 2025-04-25
+### [0.4.0] - 2025-04-25
 
 * 可以配置跳过大文件，避免 OOM；同步进度窗口可以取消同步和隐藏窗口；可选择性清除缓存。
 * 串行保存 blob 数据，日志持久化。
@@ -351,7 +367,7 @@
 * Serialize blob saving; Logs are now persistent.
 
 
-## [0.3.2] - 2025-04-23
+### [0.3.2] - 2025-04-23
 
 * 恢复同步记录后显示同步完成提示。
 * 完善了同步记录功能，自动补充缺失文件夹的同步记录。
@@ -369,7 +385,7 @@
 * Improved synchronization mechanism with interruptible 503 retry and sleep functions, fixing the crash issue when concurrently reading files with a large number of tasks.
 
 
-## [0.3.1] - 2025-04-21
+### [0.3.1] - 2025-04-21
 
 * 修复：
     * 仅导出当前 vault 的缓存
@@ -387,7 +403,7 @@
     * Added a loose synchronization mode to skip files with the same name and size.
 
 
-## [0.3.0] - 2025-04-18
+### [0.3.0] - 2025-04-18
 
 * **功能改进:**
     * 实现了 Indexed DB 缓存数据的导入导出功能，并支持保存到坚果云盘。
@@ -409,7 +425,7 @@
     * Refactored the settings module as a class.
 
 
-## [0.2.3] - 2025-04-14
+### [0.2.3] - 2025-04-14
 
 * 修复相对路径处理逻辑
 * 为过滤器添加 flag
@@ -418,7 +434,7 @@
 * allow config flag for filter
 
 
-## [0.2.2] - 2025-04-10
+### [0.2.2] - 2025-04-10
 
 *   修复了部分旧环境下的兼容性问题 (通过 polyfill 数组方法)。
 *   修复了导致移动端无法同步的问题。
@@ -427,13 +443,13 @@
 *   Fixed an issue preventing synchronization on mobile devices.
 
 
-## [0.2.1] - 2025-04-10
+### [0.2.1] - 2025-04-10
 
 *   修正了相对路径的处理。
 
 *   Corrected handling of relative paths. 
 
-## [0.2.0] - 2025-04-09
+### [0.2.0] - 2025-04-09
 
 *   简化了登录流程。
 *   增加了自定义过滤功能。
@@ -455,7 +471,7 @@
 *   Adjusted the match threshold for diffs.
 *   Encoded paths for improved handling.
 
-## [0.1.0] - 2025-04-03
+### [0.1.0] - 2025-04-03
 
 *   为冲突解决策略描述添加了备份建议。
 *   改进了手动登录帮助链接的结构。
@@ -467,7 +483,7 @@
 *   Disabled scientific notation (eNotation) for number display.
 *   Updated the Single Sign-On (SSO) component (using `@nutstore/sso-js`).
 
-## [0.0.7] - 2025-03-28
+### [0.0.7] - 2025-03-28
 
 *   新增：执行同步任务前增加确认步骤，通过包含说明文字的新弹窗进行确认。
 *   新增：添加 `confirmBeforeSync` 设置项，用于控制是否在同步前进行确认。
@@ -481,12 +497,12 @@
 *   Added notifications for errors during remote directory creation.
 *   Optimized the synchronization process (includes remote directory checks and record cleanup).
 
-## [0.0.6] - 2025-03-25
+### [0.0.6] - 2025-03-25
 
 *   提高了获取目录内容时的可靠性，增加了 API 速率限制和针对临时服务器错误 (503) 的自动重试机制。
 *   Improved reliability when fetching directory contents by adding API rate limiting and automatic retries for temporary server errors (503).
 
-## [0.0.5] - 2025-03-21
+### [0.0.5] - 2025-03-21
 
 *   修复：创建新文件夹后自动刷新列表。
 *   功能：更新了坚果云单点登录（SSO）支持。
@@ -494,12 +510,12 @@
 *   Fix: Refresh list automatically after creating a new folder.
 *   Feature: Updated Nutstore Single Sign-On (SSO) support.
 
-## [0.0.4] - 2025-03-13
+### [0.0.4] - 2025-03-13
 
 *   更新了单点登录 (SSO) 功能。
 *   Updated Single Sign-On (SSO) functionality.
 
-## [0.0.3] - 2025-03-13
+### [0.0.3] - 2025-03-13
 
 *   **同步核心与进度**
     *   新增 同步状态管理、进度百分比显示、完成状态（含失败计数）和同步按钮视觉反馈。
@@ -559,7 +575,7 @@
     *   Fixed automatic word wrapping issues.
     *   Updated plugin name.
 
-## [0.0.2] - 2025-03-07
+### [0.0.2] - 2025-03-07
 
 *   **WebDAV:**
     *   新增 WebDAV 文件浏览器功能。
@@ -589,7 +605,7 @@
     *   Added Chinese help documentation (`help` for zh).
     *   Fixed accessing configured value from `configDir`.
 
-## [0.0.1] - 2025-02-26
+### [0.0.1] - 2025-02-26
 
 *   新增 WebDAV 及本地文件同步功能，包括文件和文件夹的遍历、创建、删除（支持递归删除）以及基础的冲突解决机制。
 *   改进同步冲突处理：增加解决策略，支持跳过空文件冲突，并在解决后更新记录。
@@ -614,3 +630,5 @@
 *   Added SSO (Single Sign-On) related UI (later hidden).
 *   Improved sync setup: Remote base directory now falls back to using the vault name.
 *   Fixed issues related to handling server base paths, empty file stats, etc., during synchronization.
+
+<!-- prettier-ignore-end -->
